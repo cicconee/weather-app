@@ -1,0 +1,2 @@
+# The Weather App
+The Weather App allows users to view the weather in the United States. Users can view the hourly forecast and weather event alerts. All weather and zone data is gathered from the National Weather Service API. You can view the API specifications at https://www.weather.gov/documentation/services-web-api.
