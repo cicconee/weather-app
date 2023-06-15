@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ type Server struct {
 	Router   *chi.Mux
 	Addr     string
 	Interval time.Duration
+	Logger   *log.Logger
 
 	handler      *Handler
 	shutdownCh   chan os.Signal
@@ -110,6 +112,10 @@ func (s *Server) listenAndServe() error {
 func (s *Server) validate() error {
 	if s.Router == nil {
 		return errors.New("router is nil")
+	}
+
+	if s.Logger == nil {
+		return errors.New("logger is nil")
 	}
 
 	return nil
