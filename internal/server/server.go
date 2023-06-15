@@ -46,7 +46,7 @@ func (s *Server) interval() time.Duration {
 
 func (s *Server) init() {
 	s.handler = &Handler{}
-	s.handler.setRoutes(s.Router)
+	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)
 	signal.Notify(s.shutdownCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -59,6 +59,10 @@ func (s *Server) init() {
 	}
 
 	s.wg = &sync.WaitGroup{}
+}
+
+func (s *Server) setRoutes() {
+	s.Router.Get("/", s.handler.HelloWorld())
 }
 
 func (s *Server) run(runFn func()) {
