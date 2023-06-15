@@ -45,7 +45,7 @@ func (s *Server) interval() time.Duration {
 }
 
 func (s *Server) init() {
-	s.handler = &Handler{}
+	s.handler = NewHandler(s.Logger)
 	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)

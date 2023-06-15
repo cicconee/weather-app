@@ -2,10 +2,18 @@ package server
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 )
 
 type Handler struct {
+	logger *log.Logger
+}
+
+func NewHandler(l *log.Logger) *Handler {
+	return &Handler{
+		logger: l,
+	}
 }
 
 func (h *Handler) HelloWorld() http.HandlerFunc {
