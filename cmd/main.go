@@ -19,6 +19,7 @@ func main() {
 		Addr:     port,
 		Router:   chi.NewRouter(),
 		Interval: time.Second,
+		Logger:   log.Default(),
 	}
 	if err := srv.Start(); err != nil {
 		log.Println(err)
