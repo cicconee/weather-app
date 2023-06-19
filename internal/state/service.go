@@ -11,24 +11,26 @@ import (
 )
 
 type Service struct {
-	db *sql.DB
+	Store *Store
 }
 
 func New(db *sql.DB) *Service {
-	return &Service{db: db}
+	return &Service{
+		Store: NewStore(db),
+	}
 }
 
 func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) {
-	e := Entity{ID: strings.ToUpper(stateID)}
+	stateID = strings.ToUpper(stateID)
 
-	err := e.Select(ctx, s.db)
+	_, err := s.Store.SelectEntity(ctx, stateID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return SaveResult{}, fmt.Errorf("failed to select state %q: %w", e.ID, err)
+		return SaveResult{}, fmt.Errorf("failed to select state %q: %w", stateID, err)
 	}
 	if err == nil {
 		return SaveResult{}, &Error{
-			error:      fmt.Errorf("state %q already saved to database", e.ID),
-			msg:        fmt.Sprintf("%s already exists", e.ID),
+			error:      fmt.Errorf("state %q already saved to database", stateID),
+			msg:        fmt.Sprintf("%s already exists", stateID),
 			statusCode: http.StatusConflict,
 		}
 	}
