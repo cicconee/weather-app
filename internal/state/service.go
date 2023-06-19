@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -21,10 +23,14 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 
 	err := e.Select(ctx, s.db)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return SaveResult{}, err
+		return SaveResult{}, fmt.Errorf("failed to select state %q: %w", e.ID, err)
 	}
 	if err == nil {
-		return SaveResult{}, errors.New("state already exits")
+		return SaveResult{}, &Error{
+			error:      fmt.Errorf("state %q already saved to database", e.ID),
+			msg:        fmt.Sprintf("%s already exists", e.ID),
+			statusCode: http.StatusConflict,
+		}
 	}
 
 	return SaveResult{
