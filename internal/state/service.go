@@ -16,28 +16,6 @@ func New(db *sql.DB) *Service {
 	return &Service{db: db}
 }
 
-type SaveResult struct {
-	State     string
-	Writes    []SaveZoneResult
-	Fails     []SaveZoneFailure
-	CreatedAt time.Time
-}
-
-func (s *SaveResult) TotalZones() int {
-	return len(s.Writes) + len(s.Fails)
-}
-
-type SaveZoneResult struct {
-	URI  string
-	Code string
-	Type string
-}
-
-type SaveZoneFailure struct {
-	SaveZoneResult
-	err error
-}
-
 func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) {
 	e := Entity{ID: strings.ToUpper(stateID)}
 
