@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/state"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -20,6 +21,7 @@ type Server struct {
 	Addr     string
 	Interval time.Duration
 	Logger   *log.Logger
+	States   *state.Service
 
 	handler      *Handler
 	shutdownCh   chan os.Signal
@@ -46,6 +48,7 @@ func (s *Server) interval() time.Duration {
 
 func (s *Server) init() {
 	s.handler = NewHandler(s.Logger)
+	s.handler.states = s.States
 	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)
@@ -121,6 +124,10 @@ func (s *Server) validate() error {
 
 	if s.Logger == nil {
 		return errors.New("logger is nil")
+	}
+
+	if s.States == nil {
+		return errors.New("states is nil")
 	}
 
 	return nil
