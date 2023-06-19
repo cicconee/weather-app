@@ -7,6 +7,7 @@ import (
 
 	"github.com/cicconee/weather-app/internal/server"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 )
 
 var port string
