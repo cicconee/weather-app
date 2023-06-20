@@ -29,3 +29,13 @@ func (e *Entity) Select(ctx context.Context, db *sql.DB) error {
 		&e.UpdatedAt,
 	)
 }
+
+func (e *Entity) Insert(ctx context.Context, db *sql.DB) (sql.Result, error) {
+	query := "INSERT INTO states(id, total_zones, created_at, updated_at) VALUES($1, $2, $3, $4)"
+
+	return db.ExecContext(ctx, query,
+		e.ID,
+		e.TotalZones,
+		e.CreatedAt,
+		e.UpdatedAt)
+}

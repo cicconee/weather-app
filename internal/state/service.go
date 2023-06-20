@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -42,23 +41,23 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 
 	zones, err := s.Client.GetZoneCollection(stateID)
 	if err != nil {
-		log.Println(err)
 		return SaveResult{}, err
 	}
 
-	fmt.Println(zones)
+	state := Entity{
+		ID:         stateID,
+		TotalZones: len(zones),
+		CreatedAt:  time.Now().UTC(),
+		UpdatedAt:  time.Now().UTC(),
+	}
+	if _, err = s.Store.InsertEntity(ctx, state); err != nil {
+		return SaveResult{}, fmt.Errorf("failed to insert state %q: %w", stateID, err)
+	}
 
 	return SaveResult{
-		State: stateID,
-		Writes: []SaveZoneResult{
-			{"http://nws.api/ilc032/sra", "ilc032", "county"},
-		},
-		Fails: []SaveZoneFailure{
-			{
-				SaveZoneResult: SaveZoneResult{"http://nws.api/ilc023/sdr", "ilc023", "county"},
-				err:            errors.New("failed to Write"),
-			},
-		},
-		CreatedAt: time.Now().UTC(),
+		State:     stateID,
+		Writes:    []SaveZoneResult{},
+		Fails:     []SaveZoneFailure{},
+		CreatedAt: state.CreatedAt,
 	}, nil
 }
