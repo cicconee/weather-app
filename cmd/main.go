@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/nws"
 	"github.com/cicconee/weather-app/internal/server"
 	"github.com/cicconee/weather-app/internal/state"
 	"github.com/go-chi/chi/v5"
@@ -30,7 +31,7 @@ func main() {
 		Router:   chi.NewRouter(),
 		Interval: time.Second,
 		Logger:   log.Default(),
-		States:   state.New(db),
+		States:   state.New(nws.DefaultClient, db),
 	}
 	if err := srv.Start(); err != nil {
 		log.Println(err)

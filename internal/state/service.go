@@ -5,18 +5,23 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/cicconee/weather-app/internal/nws"
 )
 
 type Service struct {
-	Store *Store
+	Client *nws.Client
+	Store  *Store
 }
 
-func New(db *sql.DB) *Service {
+func New(c *nws.Client, db *sql.DB) *Service {
 	return &Service{
-		Store: NewStore(db),
+		Client: c,
+		Store:  NewStore(db),
 	}
 }
 
@@ -34,6 +39,14 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 			statusCode: http.StatusConflict,
 		}
 	}
+
+	zones, err := s.Client.GetZoneCollection(stateID)
+	if err != nil {
+		log.Println(err)
+		return SaveResult{}, err
+	}
+
+	fmt.Println(zones)
 
 	return SaveResult{
 		State: stateID,
