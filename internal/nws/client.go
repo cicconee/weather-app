@@ -71,6 +71,31 @@ func (c *Client) featureCollection(url string) (*featureCollection, error) {
 	return &collection, nil
 }
 
+func (c *Client) feature(url string) (*feature, error) {
+	res, err := c.get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting http response: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		var statusErr *StatusCodeError
+		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
+			statusErr = &StatusCodeError{StatusCode: res.StatusCode}
+			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
+		}
+
+		return nil, statusErr
+	}
+
+	var f feature
+	if err := json.NewDecoder(res.Body).Decode(&f); err != nil {
+		return nil, fmt.Errorf("failed decoding http response: %w", err)
+	}
+
+	return &f, nil
+}
+
 func (c *Client) GetZoneCollection(area string) ([]Zone, error) {
 	collection, err := c.featureCollection(fmt.Sprintf("%s/zones?area=%s", API, area))
 	if err != nil {
@@ -88,4 +113,18 @@ func (c *Client) GetZoneCollection(area string) ([]Zone, error) {
 	}
 
 	return zoneCollection, nil
+}
+
+func (c *Client) GetZone(zoneType string, zoneCode string) (Zone, error) {
+	feat, err := c.feature(fmt.Sprintf("%s/zones/%s/%s", API, zoneType, zoneCode))
+	if err != nil {
+		return Zone{}, fmt.Errorf("failed to get feature: %w", err)
+	}
+
+	zone, err := feat.parseZone()
+	if err != nil {
+		return Zone{}, fmt.Errorf("failed to parse Zone: %w", err)
+	}
+
+	return zone, nil
 }
