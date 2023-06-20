@@ -1,6 +1,10 @@
 package nws
 
-import "time"
+import (
+	"time"
+
+	"github.com/cicconee/weather-app/internal/geometry"
+)
 
 type Zone struct {
 	URI           string
@@ -9,4 +13,5 @@ type Zone struct {
 	Name          string    `json:"name"`
 	EffectiveDate time.Time `json:"effectiveDate"`
 	State         string    `json:"state"`
+	Geometry      geometry.MultiPolygon
 }
