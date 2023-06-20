@@ -39,9 +39,9 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 		}
 	}
 
-	zones, err := s.Client.GetZoneCollection(stateID)
+	zones, err := s.zones(stateID)
 	if err != nil {
-		return SaveResult{}, err
+		return SaveResult{}, fmt.Errorf("failed to get zones for %q: %w", stateID, err)
 	}
 
 	state := Entity{
@@ -60,4 +60,25 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 		Fails:     []SaveZoneFailure{},
 		CreatedAt: state.CreatedAt,
 	}, nil
+}
+
+func (s *Service) zones(stateID string) ([]nws.Zone, error) {
+	zones, err := s.Client.GetZoneCollection(stateID)
+	var statusError *nws.StatusCodeError
+	switch {
+	case err == nil:
+		return zones, nil
+	case errors.As(err, &statusError):
+		if statusError.StatusCode == 400 {
+			return nil, &Error{
+				error:      fmt.Errorf("unsupported state: %w", err),
+				msg:        fmt.Sprintf("%s is not a valid state", stateID),
+				statusCode: http.StatusNotFound,
+			}
+		}
+
+		return nil, fmt.Errorf("unexpected status code: %w", err)
+	default:
+		return nil, err
+	}
 }

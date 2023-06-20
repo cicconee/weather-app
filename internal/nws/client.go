@@ -54,6 +54,15 @@ func (c *Client) featureCollection(url string) (*featureCollection, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode != http.StatusOK {
+		var statusErr *StatusCodeError
+		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
+			statusErr = &StatusCodeError{StatusCode: res.StatusCode}
+			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
+		}
+		return nil, statusErr
+	}
+
 	var collection featureCollection
 	if err := json.NewDecoder(res.Body).Decode(&collection); err != nil {
 		return nil, fmt.Errorf("failed decoding http response: %w", err)
