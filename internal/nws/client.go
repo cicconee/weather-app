@@ -99,14 +99,14 @@ func (c *Client) feature(url string) (*feature, error) {
 func (c *Client) GetZoneCollection(area string) ([]Zone, error) {
 	collection, err := c.featureCollection(fmt.Sprintf("%s/zones?area=%s", API, area))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get feature collection: %w", err)
 	}
 
 	var zoneCollection []Zone
 	for _, f := range collection.Features {
 		zone, err := f.parseZone()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse Zone (URI: %s): %w", f.ID, err)
 		}
 
 		zoneCollection = append(zoneCollection, zone)
