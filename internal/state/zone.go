@@ -37,7 +37,7 @@ type ZoneEntity struct {
 	ZoneData
 }
 
-func (z *ZoneEntity) Insert(ctx context.Context, db *sql.DB) error {
+func (z *ZoneEntity) Insert(ctx context.Context, db QueryRower) error {
 	query := `
 		INSERT INTO state_zones(uri, code, type, name, effective_date, state, created_at, updated_at)
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
@@ -61,7 +61,7 @@ type PerimeterEntity struct {
 	Points geometry.PointCollection
 }
 
-func (p *PerimeterEntity) Insert(ctx context.Context, db *sql.DB) error {
+func (p *PerimeterEntity) Insert(ctx context.Context, db QueryRower) error {
 	query := `
 		INSERT INTO state_zone_perimeters(sz_id, boundary)
 		VALUES($1, $2)
@@ -77,7 +77,7 @@ type HoleEntity struct {
 	Points       geometry.PointCollection
 }
 
-func (h *HoleEntity) Insert(ctx context.Context, db *sql.DB) (sql.Result, error) {
+func (h *HoleEntity) Insert(ctx context.Context, db Execer) (sql.Result, error) {
 	query := `
 		INSERT INTO state_zone_holes(zp_id, boundary)
 		VALUES($1, $2)`

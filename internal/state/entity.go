@@ -15,7 +15,7 @@ type Entity struct {
 	UpdatedAt    time.Time
 }
 
-func (e *Entity) Select(ctx context.Context, db *sql.DB) error {
+func (e *Entity) Select(ctx context.Context, db QueryRower) error {
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s",
 		"id, total_zones, (SELECT COUNT(*) FROM state_zones WHERE state = $1), created_at, updated_at",
 		"states",
@@ -30,7 +30,7 @@ func (e *Entity) Select(ctx context.Context, db *sql.DB) error {
 	)
 }
 
-func (e *Entity) Insert(ctx context.Context, db *sql.DB) (sql.Result, error) {
+func (e *Entity) Insert(ctx context.Context, db Execer) (sql.Result, error) {
 	query := "INSERT INTO states(id, total_zones, created_at, updated_at) VALUES($1, $2, $3, $4)"
 
 	return db.ExecContext(ctx, query,
