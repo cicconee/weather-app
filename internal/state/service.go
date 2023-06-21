@@ -54,10 +54,53 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to insert state %q: %w", stateID, err)
 	}
 
+	writes := []SaveZoneResult{}
+	fails := []SaveZoneFailure{}
+
+	for _, zone := range zones {
+		result := SaveZoneResult{
+			URI:  zone.URI,
+			Code: zone.Code,
+			Type: zone.Type,
+		}
+
+		z, err := s.Client.GetZone(zone.Type, zone.Code)
+		if err != nil {
+			fails = append(fails, SaveZoneFailure{
+				SaveZoneResult: result,
+				err:            fmt.Errorf("failed to get zone: %w", err),
+			})
+			continue
+		}
+
+		zoneData := ZoneData{
+			URI:           z.URI,
+			Code:          z.Code,
+			Type:          z.Type,
+			Name:          z.Name,
+			EffectiveDate: z.EffectiveDate.UTC(),
+			State:         z.State,
+		}
+
+		err = s.Store.InsertZoneTx(ctx, Zone{
+			ZoneData: zoneData,
+			Geometry: z.Geometry,
+		})
+		if err != nil {
+			fails = append(fails, SaveZoneFailure{
+				SaveZoneResult: result,
+				err:            fmt.Errorf("failed to insert zone: %w", err),
+			})
+			continue
+		}
+
+		writes = append(writes, result)
+	}
+
 	return SaveResult{
 		State:     stateID,
-		Writes:    []SaveZoneResult{},
-		Fails:     []SaveZoneFailure{},
+		Writes:    writes,
+		Fails:     fails,
 		CreatedAt: state.CreatedAt,
 	}, nil
 }
