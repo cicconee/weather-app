@@ -52,6 +52,7 @@ func (h *Handler) HandleCreateState() http.HandlerFunc {
 
 		result, err := h.states.Save(ctx, stateID)
 		if err != nil {
+			h.logger.Printf("HandleCreateState: failed to save state (stateID=%q): %v", stateID, err)
 			writer.WriteError(err)
 			return
 		}
