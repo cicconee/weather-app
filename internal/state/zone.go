@@ -73,7 +73,6 @@ func (p *PerimeterEntity) Insert(ctx context.Context, db *sql.DB) error {
 }
 
 type HoleEntity struct {
-	ID           int
 	PerimieterID int
 	Points       geometry.PointCollection
 }
