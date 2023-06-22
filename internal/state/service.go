@@ -10,17 +10,20 @@ import (
 	"time"
 
 	"github.com/cicconee/weather-app/internal/nws"
+	"github.com/cicconee/weather-app/internal/pool"
 )
 
 type Service struct {
 	Client *nws.Client
 	Store  *Store
+	Pool   *pool.Pool
 }
 
-func New(c *nws.Client, db *sql.DB) *Service {
+func New(c *nws.Client, db *sql.DB, p *pool.Pool) *Service {
 	return &Service{
 		Client: c,
 		Store:  NewStore(db),
+		Pool:   p,
 	}
 }
 
@@ -54,48 +57,16 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to insert state %q: %w", stateID, err)
 	}
 
-	writes := []SaveZoneResult{}
-	fails := []SaveZoneFailure{}
+	w := newWorker(s.Client, s.Pool, state.TotalZones)
+	defer w.close()
 
-	for _, zone := range zones {
-		result := SaveZoneResult{
-			URI:  zone.URI,
-			Code: zone.Code,
-			Type: zone.Type,
-		}
+	// Queue each zone in the worker to get
+	// the data concurrently.
+	w.FetchEach(ctx, zonesFromNWS(zones))
 
-		z, err := s.Client.GetZone(zone.Type, zone.Code)
-		if err != nil {
-			fails = append(fails, SaveZoneFailure{
-				SaveZoneResult: result,
-				err:            fmt.Errorf("failed to get zone: %w", err),
-			})
-			continue
-		}
-
-		zoneData := ZoneData{
-			URI:           z.URI,
-			Code:          z.Code,
-			Type:          z.Type,
-			Name:          z.Name,
-			EffectiveDate: z.EffectiveDate.UTC(),
-			State:         z.State,
-		}
-
-		err = s.Store.InsertZoneTx(ctx, Zone{
-			ZoneData: zoneData,
-			Geometry: z.Geometry,
-		})
-		if err != nil {
-			fails = append(fails, SaveZoneFailure{
-				SaveZoneResult: result,
-				err:            fmt.Errorf("failed to insert zone: %w", err),
-			})
-			continue
-		}
-
-		writes = append(writes, result)
-	}
+	// Process each fetched zone and record if
+	// the zone was successfully writen or failed.
+	writes, fails := s.process(ctx, state.TotalZones, w)
 
 	return SaveResult{
 		State:     stateID,
@@ -124,4 +95,61 @@ func (s *Service) zones(stateID string) ([]nws.Zone, error) {
 	default:
 		return nil, err
 	}
+}
+
+func (s *Service) process(ctx context.Context, n int, w *worker) ([]SaveZoneResult, []SaveZoneFailure) {
+	// Initialize slices that will hold
+	// write results for zones.
+	writes := []SaveZoneResult{}
+	fails := []SaveZoneFailure{}
+
+	// Write each successful zone fetch
+	// to the database. If any errors
+	// record it in the fails slice.
+	for i := 0; i < n; i++ {
+		select {
+		case zone := <-w.dataCh:
+			saveZoneResult := SaveZoneResult{
+				URI:  zone.URI,
+				Code: zone.Code,
+				Type: zone.Type,
+			}
+
+			err := s.Store.InsertZoneTx(ctx, zone)
+			if err != nil {
+				fails = append(fails, SaveZoneFailure{
+					SaveZoneResult: saveZoneResult,
+					err:            err,
+				})
+			} else {
+				writes = append(writes, saveZoneResult)
+			}
+		case fail := <-w.failCh:
+			fails = append(fails, fail)
+		}
+	}
+
+	return writes, fails
+}
+
+func zoneFromNWS(z nws.Zone) Zone {
+	return Zone{
+		Geometry: z.Geometry,
+		ZoneData: ZoneData{
+			URI:           z.URI,
+			Code:          z.Code,
+			Type:          z.Type,
+			Name:          z.Name,
+			EffectiveDate: z.EffectiveDate,
+			State:         z.State,
+		},
+	}
+}
+
+func zonesFromNWS(nwsZones []nws.Zone) []Zone {
+	zones := []Zone{}
+	for i := range nwsZones {
+		zones = append(zones, zoneFromNWS(nwsZones[i]))
+	}
+	return zones
 }

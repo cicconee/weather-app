@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cicconee/weather-app/internal/nws"
+	"github.com/cicconee/weather-app/internal/pool"
 	"github.com/cicconee/weather-app/internal/server"
 	"github.com/cicconee/weather-app/internal/state"
 	"github.com/go-chi/chi/v5"
@@ -26,12 +27,17 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// Create a Pool with 10 workers each
+	// with a channel size of 100.
+	pool := pool.New(10, 100)
+	pool.Start()
+
 	srv := server.Server{
 		Addr:     port,
 		Router:   chi.NewRouter(),
 		Interval: time.Second,
 		Logger:   log.Default(),
-		States:   state.New(nws.DefaultClient, db),
+		States:   state.New(nws.DefaultClient, db, pool),
 	}
 	if err := srv.Start(); err != nil {
 		log.Println(err)
