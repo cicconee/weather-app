@@ -57,21 +57,17 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to insert state %q: %w", stateID, err)
 	}
 
-	w := newWorker(s.Client, s.Pool, state.TotalZones)
+	w := newWorker(s.Client, s.Pool, s.Store, state.TotalZones)
 	defer w.close()
 
-	// Queue each zone in the worker to get
-	// the data concurrently.
-	w.FetchEach(ctx, zonesFromNWS(zones))
-
-	// Process each fetched zone and record if
-	// the zone was successfully writen or failed.
-	writes, fails := s.process(ctx, state.TotalZones, w)
+	// Fetch and write each zone to the
+	// database.
+	zoneResult := w.FetchEach(ctx, zonesFromNWS(zones))
 
 	return SaveResult{
 		State:     stateID,
-		Writes:    writes,
-		Fails:     fails,
+		Writes:    zoneResult.Writes,
+		Fails:     zoneResult.Fails,
 		CreatedAt: state.CreatedAt,
 	}, nil
 }
@@ -95,41 +91,6 @@ func (s *Service) zones(stateID string) ([]nws.Zone, error) {
 	default:
 		return nil, err
 	}
-}
-
-func (s *Service) process(ctx context.Context, n int, w *worker) ([]SaveZoneResult, []SaveZoneFailure) {
-	// Initialize slices that will hold
-	// write results for zones.
-	writes := []SaveZoneResult{}
-	fails := []SaveZoneFailure{}
-
-	// Write each successful zone fetch
-	// to the database. If any errors
-	// record it in the fails slice.
-	for i := 0; i < n; i++ {
-		select {
-		case zone := <-w.dataCh:
-			saveZoneResult := SaveZoneResult{
-				URI:  zone.URI,
-				Code: zone.Code,
-				Type: zone.Type,
-			}
-
-			err := s.Store.InsertZoneTx(ctx, zone)
-			if err != nil {
-				fails = append(fails, SaveZoneFailure{
-					SaveZoneResult: saveZoneResult,
-					err:            err,
-				})
-			} else {
-				writes = append(writes, saveZoneResult)
-			}
-		case fail := <-w.failCh:
-			fails = append(fails, fail)
-		}
-	}
-
-	return writes, fails
 }
 
 func zoneFromNWS(z nws.Zone) Zone {

@@ -17,6 +17,15 @@ type ZoneData struct {
 	State         string
 }
 
+func (z *ZoneData) SaveZoneFailure(err error) SaveZoneFailure {
+	return SaveZoneFailure{
+		URI:  z.URI,
+		Code: z.Code,
+		Type: z.Type,
+		err:  err,
+	}
+}
+
 type Zone struct {
 	Geometry geometry.MultiPolygon
 	ZoneData

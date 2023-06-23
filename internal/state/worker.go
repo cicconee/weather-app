@@ -10,14 +10,16 @@ import (
 type worker struct {
 	client *nws.Client
 	p      *pool.Pool
+	s      *Store
 	dataCh chan Zone
 	failCh chan SaveZoneFailure
 }
 
-func newWorker(c *nws.Client, p *pool.Pool, zoneCount int) *worker {
+func newWorker(c *nws.Client, p *pool.Pool, s *Store, zoneCount int) *worker {
 	return &worker{
 		client: c,
 		p:      p,
+		s:      s,
 		dataCh: make(chan Zone, zoneCount),
 		failCh: make(chan SaveZoneFailure, zoneCount),
 	}
@@ -30,12 +32,10 @@ func (w *worker) close() {
 
 func (w *worker) fail(z Zone, err error) {
 	w.failCh <- SaveZoneFailure{
-		SaveZoneResult: SaveZoneResult{
-			URI:  z.URI,
-			Code: z.Code,
-			Type: z.Type,
-		},
-		err: err,
+		URI:  z.URI,
+		Code: z.Code,
+		Type: z.Type,
+		err:  err,
 	}
 }
 
@@ -43,9 +43,38 @@ func (w *worker) finish(z Zone) {
 	w.dataCh <- z
 }
 
-func (w *worker) FetchEach(ctx context.Context, zones []Zone) {
+func (w *worker) FetchEach(ctx context.Context, zones []Zone) SaveZoneResult {
+	// Fetch zone data from the NWS
+	// API concurrently.
 	for i := range zones {
 		w.Fetch(ctx, zones[i])
+	}
+
+	// Define slices that will hold
+	// the write results.
+	writes := []Zone{}
+	fails := []SaveZoneFailure{}
+
+	// Write each successfully fetched
+	// zone to the database. If any
+	// errors occurred record it in
+	// the fails slice.
+	for range zones {
+		select {
+		case zone := <-w.dataCh:
+			if err := w.s.InsertZoneTx(ctx, zone); err != nil {
+				fails = append(fails, zone.SaveZoneFailure(err))
+			} else {
+				writes = append(writes, zone)
+			}
+		case fail := <-w.failCh:
+			fails = append(fails, fail)
+		}
+	}
+
+	return SaveZoneResult{
+		Writes: writes,
+		Fails:  fails,
 	}
 }
 
