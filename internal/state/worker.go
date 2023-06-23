@@ -43,7 +43,7 @@ func (w *worker) finish(z Zone) {
 	w.dataCh <- z
 }
 
-func (w *worker) FetchEach(ctx context.Context, zones []Zone) SaveZoneResult {
+func (w *worker) SaveEach(ctx context.Context, zones []Zone) SaveZoneResult {
 	// Fetch zone data from the NWS
 	// API concurrently.
 	for i := range zones {

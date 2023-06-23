@@ -62,7 +62,7 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 
 	// Fetch and write each zone to the
 	// database.
-	zoneResult := w.FetchEach(ctx, zonesFromNWS(zones))
+	zoneResult := w.SaveEach(ctx, zonesFromNWS(zones))
 
 	return SaveResult{
 		State:     stateID,
