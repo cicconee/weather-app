@@ -93,7 +93,7 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
 	}
 
-	storedZoneMap := ZoneEntityURIMap{}
+	storedZoneMap := ZoneURIMap{}
 	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
 		return SaveResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)
 	}
@@ -108,20 +108,20 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) 
 }
 
 type ZoneDelta struct {
-	Insert ZoneEntityCollection
-	Update ZoneEntityCollection
-	Delete ZoneEntityCollection
+	Insert ZoneCollection
+	Update ZoneCollection
+	Delete ZoneCollection
 }
 
 func NewZoneDelta() *ZoneDelta {
 	return &ZoneDelta{
-		Insert: ZoneEntityCollection{},
-		Update: ZoneEntityCollection{},
-		Delete: ZoneEntityCollection{},
+		Insert: ZoneCollection{},
+		Update: ZoneCollection{},
+		Delete: ZoneCollection{},
 	}
 }
 
-func (s *Service) delta(updatedZones []Zone, storedZones ZoneEntityURIMap) *ZoneDelta {
+func (s *Service) delta(updatedZones []Zone, storedZones ZoneURIMap) *ZoneDelta {
 	delta := NewZoneDelta()
 
 	for i := range updatedZones {
@@ -129,13 +129,13 @@ func (s *Service) delta(updatedZones []Zone, storedZones ZoneEntityURIMap) *Zone
 
 		if storedZone, ok := storedZones[updatedZone.URI]; ok {
 			if storedZone.EffectiveDate.Before(updatedZone.EffectiveDate) {
-				storedZone.ZoneData = updatedZone.ZoneData
+				storedZone.CopyUpdateableData(updatedZone)
 				delta.Update = append(delta.Update, storedZone)
 			}
 
 			delete(storedZones, storedZone.URI)
 		} else {
-			delta.Insert = append(delta.Insert, updatedZone.ToEntity())
+			delta.Insert = append(delta.Insert, updatedZone)
 		}
 	}
 
@@ -169,15 +169,13 @@ func (s *Service) zones(stateID string) ([]Zone, error) {
 
 func zoneFromNWS(z nws.Zone) Zone {
 	return Zone{
-		Geometry: z.Geometry,
-		ZoneData: ZoneData{
-			URI:           z.URI,
-			Code:          z.Code,
-			Type:          z.Type,
-			Name:          z.Name,
-			EffectiveDate: z.EffectiveDate,
-			State:         z.State,
-		},
+		URI:           z.URI,
+		Code:          z.Code,
+		Type:          z.Type,
+		Name:          z.Name,
+		EffectiveDate: z.EffectiveDate,
+		State:         z.State,
+		Geometry:      NewGeometry(z.Geometry),
 	}
 }
 

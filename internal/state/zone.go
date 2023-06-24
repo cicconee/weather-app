@@ -4,55 +4,45 @@ import (
 	"context"
 	"database/sql"
 	"time"
-
-	"github.com/cicconee/weather-app/internal/geometry"
 )
 
-type ZoneData struct {
+type Zone struct {
+	ID            int
 	URI           string
 	Code          string
 	Type          string
 	Name          string
 	EffectiveDate time.Time
 	State         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Geometry      Geometry
 }
 
-func (z *ZoneData) SaveZoneFailure(err error) SaveZoneFailure {
+func (z *Zone) CopyUpdateableData(c Zone) {
+	z.URI = c.URI
+	z.Code = c.Code
+	z.Type = c.Type
+	z.Name = c.Name
+	z.EffectiveDate = c.EffectiveDate
+	z.State = c.State
+	z.Geometry = c.Geometry
+}
+
+func (z *Zone) SaveZoneFailure(err error) SaveZoneFailure {
 	return SaveZoneFailure{
-		URI:  z.URI,
-		Code: z.Code,
-		Type: z.Type,
-		err:  err,
+		URI: z.URI,
+		err: err,
 	}
 }
 
-type Zone struct {
-	Geometry geometry.MultiPolygon
-	ZoneData
-}
-
-func (z *Zone) ToEntity() ZoneEntity {
-	return ZoneEntity{
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		ZoneData:  z.ZoneData,
-	}
-}
-
-type ZoneEntity struct {
-	ID        int
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	ZoneData
-}
-
-func (z *ZoneEntity) Insert(ctx context.Context, db QueryRower) error {
+func (z *Zone) Insert(ctx context.Context, db QueryRower) error {
 	query := `
 		INSERT INTO state_zones(uri, code, type, name, effective_date, state, created_at, updated_at)
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id`
 
-	return db.QueryRowContext(ctx, query,
+	if err := db.QueryRowContext(ctx, query,
 		z.URI,
 		z.Code,
 		z.Type,
@@ -61,10 +51,22 @@ func (z *ZoneEntity) Insert(ctx context.Context, db QueryRower) error {
 		z.State,
 		z.CreatedAt,
 		z.UpdatedAt,
-	).Scan(&z.ID)
+	).Scan(&z.ID); err != nil {
+		return err
+	}
+
+	for _, perimeter := range z.Geometry {
+		perimeter.ZoneID = z.ID
+
+		if err := perimeter.Insert(ctx, db); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (z *ZoneEntity) scan(scanFunc func(...any) error) error {
+func (z *Zone) scan(scanFunc func(...any) error) error {
 	return scanFunc(
 		&z.ID,
 		&z.URI,
@@ -78,11 +80,11 @@ func (z *ZoneEntity) scan(scanFunc func(...any) error) error {
 	)
 }
 
-type ZoneEntityCollection []ZoneEntity
+type ZoneCollection []Zone
 
-type ZoneEntityURIMap map[string]ZoneEntity
+type ZoneURIMap map[string]Zone
 
-func (z ZoneEntityURIMap) Select(ctx context.Context, db *sql.DB, state string) error {
+func (z ZoneURIMap) Select(ctx context.Context, db *sql.DB, state string) error {
 	query := `
 		SELECT id, uri, code, type, name, effective_date, state, created_at, updated_at
 		FROM state_zones
@@ -94,7 +96,7 @@ func (z ZoneEntityURIMap) Select(ctx context.Context, db *sql.DB, state string) 
 	}
 
 	for rows.Next() {
-		var e ZoneEntity
+		var e Zone
 		if err := e.scan(rows.Scan); err != nil {
 			return err
 		}

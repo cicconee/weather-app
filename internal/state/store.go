@@ -41,31 +41,6 @@ func (s *Store) InsertEntity(ctx context.Context, state Entity) (sql.Result, err
 
 func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
-		zoneEntity := zone.ToEntity()
-		if err := zoneEntity.Insert(ctx, tx); err != nil {
-			return fmt.Errorf("failed to insert ZoneEntity into database: %w", err)
-		}
-
-		for _, polygon := range zone.Geometry {
-			perimeterEntity := PerimeterEntity{
-				ZoneID: zoneEntity.ID,
-				Points: polygon.Permiter(),
-			}
-			if err := perimeterEntity.Insert(ctx, tx); err != nil {
-				return fmt.Errorf("failed to insert PerimeterEntity into database: %w", err)
-			}
-
-			for _, hole := range polygon.Holes() {
-				holeEntity := HoleEntity{
-					PerimieterID: perimeterEntity.ID,
-					Points:       hole,
-				}
-				if _, err := holeEntity.Insert(ctx, tx); err != nil {
-					return fmt.Errorf("failed to insert HoleEntity into database: %w", err)
-				}
-			}
-		}
-
-		return nil
+		return zone.Insert(ctx, tx)
 	})
 }

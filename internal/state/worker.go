@@ -94,7 +94,7 @@ func (w *worker) Fetch(ctx context.Context, z Zone) {
 			return
 		}
 
-		z.Geometry = zone.Geometry
+		z.Geometry = NewGeometry(zone.Geometry)
 
 		w.finish(z)
 	})
