@@ -42,6 +42,9 @@ func (z *Zone) Insert(ctx context.Context, db QueryRower) error {
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id`
 
+	z.CreatedAt = time.Now().UTC()
+	z.UpdatedAt = time.Now().UTC()
+
 	if err := db.QueryRowContext(ctx, query,
 		z.URI,
 		z.Code,
