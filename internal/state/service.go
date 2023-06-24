@@ -62,7 +62,7 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 
 	// Fetch and write each zone to the
 	// database.
-	zoneResult := w.SaveEach(ctx, zonesFromNWS(zones))
+	zoneResult := w.SaveEach(ctx, zones)
 
 	return SaveResult{
 		State:     stateID,
@@ -88,11 +88,10 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to select state in database (stateID=%q): %w", stateID, err)
 	}
 
-	nwsZones, err := s.zones(stateID)
+	updatedZones, err := s.zones(stateID)
 	if err != nil {
 		return SaveResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
 	}
-	updatedZones := zonesFromNWS(nwsZones)
 
 	storedZoneMap := ZoneEntityURIMap{}
 	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
@@ -147,12 +146,12 @@ func (s *Service) delta(updatedZones []Zone, storedZones ZoneEntityURIMap) *Zone
 	return delta
 }
 
-func (s *Service) zones(stateID string) ([]nws.Zone, error) {
+func (s *Service) zones(stateID string) ([]Zone, error) {
 	zones, err := s.Client.GetZoneCollection(stateID)
 	var statusError *nws.StatusCodeError
 	switch {
 	case err == nil:
-		return zones, nil
+		return zonesFromNWS(zones), nil
 	case errors.As(err, &statusError):
 		if statusError.StatusCode == 400 {
 			return nil, &Error{
