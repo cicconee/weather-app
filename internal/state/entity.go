@@ -39,3 +39,20 @@ func (e *Entity) Insert(ctx context.Context, db Execer) (sql.Result, error) {
 		e.CreatedAt,
 		e.UpdatedAt)
 }
+
+// Update updates the entity in the database
+// where the id is equal to this entities id.
+// Only the values stored in the fields TotalZones
+// and UpdatedAt will be written to the database.
+func (e *Entity) Update(ctx context.Context, db Execer) (sql.Result, error) {
+	query := `
+		UPDATE states 
+		SET total_zones = $1, updated_at = $2
+		WHERE id = $3`
+
+	return db.ExecContext(ctx, query,
+		e.TotalZones,
+		e.UpdatedAt,
+		e.ID,
+	)
+}

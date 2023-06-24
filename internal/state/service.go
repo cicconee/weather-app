@@ -93,6 +93,14 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) 
 		return SaveResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
 	}
 
+	state := &Entity{
+		ID:         stateID,
+		TotalZones: len(updatedZones),
+	}
+	if _, err = s.Store.UpdateEntity(ctx, state); err != nil {
+		return SaveResult{}, fmt.Errorf("failed to update state %q: %w", stateID, err)
+	}
+
 	storedZoneMap := ZoneURIMap{}
 	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
 		return SaveResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)

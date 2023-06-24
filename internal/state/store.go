@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Store struct {
@@ -37,6 +38,18 @@ func (s *Store) SelectEntity(ctx context.Context, stateID string) (Entity, error
 
 func (s *Store) InsertEntity(ctx context.Context, state Entity) (sql.Result, error) {
 	return state.Insert(ctx, s.DB)
+}
+
+// UpdateEntity writes state to the database
+// as an update. The state UpdatedAt field will be
+// set to the current time in UTC format before
+// writing to the database.
+//
+// If the state UpdatedAt field is set it will be
+// overwritten.
+func (s *Store) UpdateEntity(ctx context.Context, state *Entity) (sql.Result, error) {
+	state.UpdatedAt = time.Now().UTC()
+	return state.Update(ctx, s.DB)
 }
 
 func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
