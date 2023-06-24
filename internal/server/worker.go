@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -16,12 +15,10 @@ func (w *worker) start() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("at interval.")
+			// TODO: execute job.
 		case <-w.killCh:
-			fmt.Println("killing interval...")
 			ticker.Stop()
-			time.Sleep(3 * time.Second)
-			fmt.Println("interval killed.")
+			// TODO: clean up any running jobs.
 			return
 		}
 	}
