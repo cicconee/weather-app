@@ -64,6 +64,47 @@ func (z *ZoneEntity) Insert(ctx context.Context, db QueryRower) error {
 	).Scan(&z.ID)
 }
 
+func (z *ZoneEntity) scan(scanFunc func(...any) error) error {
+	return scanFunc(
+		&z.ID,
+		&z.URI,
+		&z.Code,
+		&z.Type,
+		&z.Name,
+		&z.EffectiveDate,
+		&z.State,
+		&z.CreatedAt,
+		&z.UpdatedAt,
+	)
+}
+
+type ZoneEntityCollection []ZoneEntity
+
+type ZoneEntityURIMap map[string]ZoneEntity
+
+func (z ZoneEntityURIMap) Select(ctx context.Context, db *sql.DB, state string) error {
+	query := `
+		SELECT id, uri, code, type, name, effective_date, state, created_at, updated_at
+		FROM state_zones
+		WHERE state = $1`
+
+	rows, err := db.QueryContext(ctx, query, state)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var e ZoneEntity
+		if err := e.scan(rows.Scan); err != nil {
+			return err
+		}
+
+		z[e.URI] = e
+	}
+
+	return nil
+}
+
 type PerimeterEntity struct {
 	ID     int
 	ZoneID int

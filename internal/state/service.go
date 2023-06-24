@@ -72,6 +72,81 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 	}, nil
 }
 
+func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) {
+	stateID = strings.ToUpper(stateID)
+
+	_, err := s.Store.SelectEntity(ctx, stateID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return SaveResult{}, &Error{
+				error:      fmt.Errorf("state not found in database (stateID=%q): %w", stateID, err),
+				msg:        fmt.Sprintf("%s not found", stateID),
+				statusCode: http.StatusNotFound,
+			}
+		}
+
+		return SaveResult{}, fmt.Errorf("failed to select state in database (stateID=%q): %w", stateID, err)
+	}
+
+	nwsZones, err := s.zones(stateID)
+	if err != nil {
+		return SaveResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
+	}
+	updatedZones := zonesFromNWS(nwsZones)
+
+	storedZoneMap := ZoneEntityURIMap{}
+	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
+		return SaveResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)
+	}
+
+	delta := s.delta(updatedZones, storedZoneMap)
+
+	fmt.Println("INSERT:", delta.Insert)
+	fmt.Println("UPDATE:", delta.Update)
+	fmt.Println("DELETE:", delta.Delete)
+
+	return SaveResult{}, nil
+}
+
+type ZoneDelta struct {
+	Insert ZoneEntityCollection
+	Update ZoneEntityCollection
+	Delete ZoneEntityCollection
+}
+
+func NewZoneDelta() *ZoneDelta {
+	return &ZoneDelta{
+		Insert: ZoneEntityCollection{},
+		Update: ZoneEntityCollection{},
+		Delete: ZoneEntityCollection{},
+	}
+}
+
+func (s *Service) delta(updatedZones []Zone, storedZones ZoneEntityURIMap) *ZoneDelta {
+	delta := NewZoneDelta()
+
+	for i := range updatedZones {
+		updatedZone := updatedZones[i]
+
+		if storedZone, ok := storedZones[updatedZone.URI]; ok {
+			if storedZone.EffectiveDate.Before(updatedZone.EffectiveDate) {
+				storedZone.ZoneData = updatedZone.ZoneData
+				delta.Update = append(delta.Update, storedZone)
+			}
+
+			delete(storedZones, storedZone.URI)
+		} else {
+			delta.Insert = append(delta.Insert, updatedZone.ToEntity())
+		}
+	}
+
+	for uri := range storedZones {
+		delta.Delete = append(delta.Delete, storedZones[uri])
+	}
+
+	return delta
+}
+
 func (s *Service) zones(stateID string) ([]nws.Zone, error) {
 	zones, err := s.Client.GetZoneCollection(stateID)
 	var statusError *nws.StatusCodeError
