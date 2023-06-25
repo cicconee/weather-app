@@ -1,16 +1,16 @@
 package state
 
 type ZoneDelta struct {
-	Insert ZoneCollection
-	Update ZoneCollection
-	Delete ZoneCollection
+	Insert []Zone
+	Update []Zone
+	Delete []Zone
 }
 
 func NewZoneDelta() *ZoneDelta {
 	return &ZoneDelta{
-		Insert: ZoneCollection{},
-		Update: ZoneCollection{},
-		Delete: ZoneCollection{},
+		Insert: []Zone{},
+		Update: []Zone{},
+		Delete: []Zone{},
 	}
 }
 
@@ -22,8 +22,8 @@ func (z *ZoneDelta) TotalInsertUpdates() int {
 	return len(z.Insert) + len(z.Update)
 }
 
-func (z *ZoneDelta) InsertUpdate() ZoneCollection {
-	zc := ZoneCollection{}
+func (z *ZoneDelta) InsertUpdate() []Zone {
+	zc := []Zone{}
 	zc = append(zc, z.Insert...)
 	zc = append(zc, z.Update...)
 	return zc

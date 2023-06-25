@@ -50,7 +50,7 @@ type FetchResult struct {
 }
 
 // FetchEach concurrently fetches the data for
-// each zone in zones. Each zone in the ZoneCollection
+// each zone in zones. Each zone in the zones slice
 // only needs the Type and Code to be set. The
 // FetchResult Zones field will hold the up to date
 // data for the Zone.
@@ -58,7 +58,7 @@ type FetchResult struct {
 // For each zone in zones, if ID, CreatedAt, or
 // UpdatedAt was set it will be included in the
 // FetchResult Zones field.
-func (f *Fetcher) FetchEach(ctx context.Context, zones ZoneCollection) FetchResult {
+func (f *Fetcher) FetchEach(ctx context.Context, zones []Zone) FetchResult {
 	result := FetchResult{
 		Zones: ZoneURIMap{},
 		Fails: map[string]error{},

@@ -83,8 +83,6 @@ func (z *Zone) scan(scanFunc func(...any) error) error {
 	)
 }
 
-type ZoneCollection []Zone
-
 type ZoneURIMap map[string]Zone
 
 func (z ZoneURIMap) Select(ctx context.Context, db *sql.DB, state string) error {
