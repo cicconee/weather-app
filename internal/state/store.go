@@ -82,3 +82,11 @@ func (s *Store) UpdateZoneTx(ctx context.Context, zone Zone) error {
 		return zone.Update(ctx, tx)
 	})
 }
+
+// DeleteZone deletes the zone with the provided
+// ID (zoneID).
+func (s *Store) DeleteZone(ctx context.Context, zoneID int) error {
+	zone := Zone{ID: zoneID}
+	_, err := zone.Delete(ctx, s.DB)
+	return err
+}

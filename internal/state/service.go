@@ -213,9 +213,16 @@ func (s *Service) writeDelta(ctx context.Context, p writeDeltaParams) SyncResult
 	}
 
 	// Delete all the old zones.
-	for _, zone := range delta.Delete {
-		// TODO: delete zone.
-		fmt.Println("Delete:", zone.ID)
+	for i, zone := range delta.Delete {
+		if err := s.Store.DeleteZone(ctx, zone.ID); err != nil {
+			result.Fails = append(result.Fails, SyncZoneFailure{
+				URI: zone.URI,
+				Op:  "delete",
+				err: err,
+			})
+		} else {
+			result.Deletes = append(result.Deletes, delta.Delete[i])
+		}
 	}
 
 	return result

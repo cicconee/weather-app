@@ -120,6 +120,16 @@ func (z *Zone) Update(ctx context.Context, db QueryRowExecer) error {
 	return nil
 }
 
+// Delete will delete this zone from the
+// database. Only the ID needs to be set
+// before calling Delete.
+//
+// Delete assumes the ID field is set
+// correctly.
+func (z *Zone) Delete(ctx context.Context, db Execer) (sql.Result, error) {
+	return db.ExecContext(ctx, `DELETE FROM state_zones WHERE id = $1`, z.ID)
+}
+
 func (z *Zone) scan(scanFunc func(...any) error) error {
 	return scanFunc(
 		&z.ID,
