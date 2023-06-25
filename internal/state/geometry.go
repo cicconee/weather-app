@@ -2,11 +2,21 @@ package state
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/cicconee/weather-app/internal/geometry"
 )
 
 type Geometry []Perimeter
+
+// Delete deletes all perimeters in the database
+// associated with zoneID. Deleting a perimeter
+// will cascade delete any holes associated with it.
+func (g *Geometry) Delete(ctx context.Context, db Execer, zoneID int) (sql.Result, error) {
+	query := `DELETE FROM state_zone_perimeters WHERE sz_id = $1`
+
+	return db.ExecContext(ctx, query, zoneID)
+}
 
 func NewGeometry(mp geometry.MultiPolygon) Geometry {
 	g := Geometry{}

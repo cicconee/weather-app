@@ -64,3 +64,21 @@ func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
 		return zone.Insert(ctx, tx)
 	})
 }
+
+// UpdateZoneTx writes zone to the database as
+// a update. The current Geometry stored in the
+// database for zone will be deleted. The Geometry
+// stored in the Geometry field of zone will then
+// be inserted to the database.
+//
+// UpdateZoneTx is wrapped in a database transaction.
+// If any operations fail the database will roll back.
+//
+// If the zone UpdatedAt field is set it will be
+// overwritten.
+func (s *Store) UpdateZoneTx(ctx context.Context, zone Zone) error {
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		zone.UpdatedAt = time.Now().UTC()
+		return zone.Update(ctx, tx)
+	})
+}

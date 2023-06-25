@@ -69,6 +69,57 @@ func (z *Zone) Insert(ctx context.Context, db QueryRower) error {
 	return nil
 }
 
+type QueryRowExecer interface {
+	QueryRower
+	Execer
+}
+
+// Update will update this Zone in the database.
+// The current Geometry stored in the database
+// will be deleted then the Geometry stored in
+// this Zone will be inserted.
+//
+// Update assumes all fields are set correctly.
+func (z *Zone) Update(ctx context.Context, db QueryRowExecer) error {
+	query := `
+		UPDATE state_zones 
+		SET uri = $1,
+			code = $2,
+			type = $3,
+			name = $4,
+			effective_date = $5,
+			state = $6,
+			updated_at = $7
+		WHERE id = $8`
+
+	if _, err := db.ExecContext(ctx, query,
+		z.URI,
+		z.Code,
+		z.Type,
+		z.Name,
+		z.EffectiveDate,
+		z.State,
+		z.UpdatedAt,
+		z.ID,
+	); err != nil {
+		return err
+	}
+
+	if _, err := z.Geometry.Delete(ctx, db, z.ID); err != nil {
+		return err
+	}
+
+	for _, perimeter := range z.Geometry {
+		perimeter.ZoneID = z.ID
+
+		if err := perimeter.Insert(ctx, db); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (z *Zone) scan(scanFunc func(...any) error) error {
 	return scanFunc(
 		&z.ID,

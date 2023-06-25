@@ -200,8 +200,15 @@ func (s *Service) writeDelta(ctx context.Context, p writeDeltaParams) SyncResult
 	// Updated all the expired zones.
 	for _, zone := range delta.Update {
 		if z, ok := fetchResult.Zones[zone.URI]; ok {
-			// TODO: update zone.
-			fmt.Println("Update:", z.ID)
+			if err := s.Store.UpdateZoneTx(ctx, z); err != nil {
+				result.Fails = append(result.Fails, SyncZoneFailure{
+					URI: z.URI,
+					Op:  "update",
+					err: err,
+				})
+			} else {
+				result.Updates = append(result.Updates, z)
+			}
 		}
 	}
 
