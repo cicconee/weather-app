@@ -72,61 +72,146 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 	}, nil
 }
 
-func (s *Service) Sync(ctx context.Context, stateID string) (SaveResult, error) {
+type SyncResult struct {
+	State   string
+	Inserts []Zone
+	Updates []Zone
+	Deletes []Zone
+	Fails   []SyncZoneFailure
+}
+
+type SyncZoneFailure struct {
+	URI string
+	Op  string
+	err error
+}
+
+func (s *Service) Sync(ctx context.Context, stateID string) (SyncResult, error) {
 	stateID = strings.ToUpper(stateID)
 
-	_, err := s.Store.SelectEntity(ctx, stateID)
+	// Selext state from database to make
+	// sure it exists.
+	state, err := s.Store.SelectEntity(ctx, stateID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return SaveResult{}, &Error{
+			return SyncResult{}, &Error{
 				error:      fmt.Errorf("state not found in database (stateID=%q): %w", stateID, err),
 				msg:        fmt.Sprintf("%s not found", stateID),
 				statusCode: http.StatusNotFound,
 			}
 		}
 
-		return SaveResult{}, fmt.Errorf("failed to select state in database (stateID=%q): %w", stateID, err)
+		return SyncResult{}, fmt.Errorf("failed to select state in database (stateID=%q): %w", stateID, err)
 	}
 
+	// Get the up to date data for zones.
+	// At this point every Zone in updatedZones
+	// has an unset Geometry.
 	updatedZones, err := s.zones(stateID)
 	if err != nil {
-		return SaveResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
+		return SyncResult{}, fmt.Errorf("failed to get zones (stateID=%q): %w", stateID, err)
 	}
 
-	state := &Entity{
-		ID:         stateID,
-		TotalZones: len(updatedZones),
-	}
-	if _, err = s.Store.UpdateEntity(ctx, state); err != nil {
-		return SaveResult{}, fmt.Errorf("failed to update state %q: %w", stateID, err)
+	// Write the state updates to the
+	// database.
+	state.TotalZones = len(updatedZones)
+	if _, err = s.Store.UpdateEntity(ctx, &state); err != nil {
+		return SyncResult{}, fmt.Errorf("failed to update state (state.ID=%q): %w", state.ID, err)
 	}
 
+	// Get the current zone data from
+	// the database to compare to the
+	// up to date zone data. This will
+	// be used to determine the zone
+	// delta (insert, update, delete).
 	storedZoneMap := ZoneURIMap{}
 	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
-		return SaveResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)
+		return SyncResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)
 	}
 
-	delta := s.delta(updatedZones, storedZoneMap)
-
-	fmt.Println("INSERT:", delta.Insert)
-	fmt.Println("UPDATE:", delta.Update)
-	fmt.Println("DELETE:", delta.Delete)
-
-	return SaveResult{}, nil
+	return s.writeDelta(ctx, writeDeltaParams{
+		stateID:      stateID,
+		updatedZones: updatedZones,
+		storedZones:  storedZoneMap,
+	}), nil
 }
 
-type ZoneDelta struct {
-	Insert ZoneCollection
-	Update ZoneCollection
-	Delete ZoneCollection
+type writeDeltaParams struct {
+	stateID      string
+	updatedZones []Zone
+	storedZones  ZoneURIMap
 }
 
-func NewZoneDelta() *ZoneDelta {
-	return &ZoneDelta{
-		Insert: ZoneCollection{},
-		Update: ZoneCollection{},
-		Delete: ZoneCollection{},
+// writeDelta compares the collection of up to date zones
+// (updatedZones) to the stored collection of zones (storedZones).
+// By comparing these two collections a ZoneDelta is formed
+// that specificies what zones need to be inserted, updated,
+// or deleted. These changes are then executed to bring the
+// database up to date. For any zones needed to be inserted
+// or updated, additional network calls are made concurrently.
+//
+// Any errors that occur while fetching the data or
+// persisting the data will be recorded as a SyncZoneFailure
+// and stored in the SyncResult.Fails field.
+func (s *Service) writeDelta(ctx context.Context, p writeDeltaParams) SyncResult {
+	delta := s.delta(p.updatedZones, p.storedZones)
+
+	fetcher := NewFetcher(s.Client, s.Pool, s.Store, delta.TotalInsertUpdates())
+	defer fetcher.close()
+
+	// For every zone that needs to be
+	// inserted or updated in the database,
+	// get the up to date Geometry.
+	fetchResult := fetcher.FetchEach(ctx, delta.InsertUpdate())
+
+	result := SyncResult{
+		State:   p.stateID,
+		Inserts: []Zone{},
+		Updates: []Zone{},
+		Deletes: []Zone{},
+		Fails:   []SyncZoneFailure{},
 	}
+
+	// Record any errors while fetching the
+	// geometric data.
+	for uri, err := range fetchResult.Fails {
+		result.Fails = append(result.Fails, SyncZoneFailure{
+			URI: uri,
+			Op:  "fetch",
+			err: err,
+		})
+	}
+
+	// Insert all the new zones.
+	for _, zone := range delta.Insert {
+		if z, ok := fetchResult.Zones[zone.URI]; ok {
+			if err := s.Store.InsertZoneTx(ctx, z); err != nil {
+				result.Fails = append(result.Fails, SyncZoneFailure{
+					URI: z.URI,
+					Op:  "insert",
+					err: err,
+				})
+			} else {
+				result.Inserts = append(result.Inserts, z)
+			}
+		}
+	}
+
+	// Updated all the expired zones.
+	for _, zone := range delta.Update {
+		if z, ok := fetchResult.Zones[zone.URI]; ok {
+			// TODO: update zone.
+			fmt.Println("Update:", z.ID)
+		}
+	}
+
+	// Delete all the old zones.
+	for _, zone := range delta.Delete {
+		// TODO: delete zone.
+		fmt.Println("Delete:", zone.ID)
+	}
+
+	return result
 }
 
 func (s *Service) delta(updatedZones []Zone, storedZones ZoneURIMap) *ZoneDelta {
