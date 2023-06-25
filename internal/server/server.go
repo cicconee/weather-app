@@ -67,6 +67,7 @@ func (s *Server) init() {
 func (s *Server) setRoutes() {
 	s.Router.Get("/", s.handler.HelloWorld())
 	s.Router.Post("/states", s.handler.HandleCreateState())
+	s.Router.Post("/states/sync", s.handler.HandleSyncState())
 }
 
 func (s *Server) run(runFn func()) {

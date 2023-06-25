@@ -69,3 +69,38 @@ func (h *Handler) HandleCreateState() http.HandlerFunc {
 		})
 	}
 }
+
+func (h *Handler) HandleSyncState() http.HandlerFunc {
+	type res struct {
+		State        string                  `json:"state"`
+		TotalInserts int                     `json:"total_inserts"`
+		TotalUpdates int                     `json:"total_updates"`
+		TotalDeletes int                     `json:"total_deletes"`
+		Fails        []state.SyncZoneFailure `json:"fails"`
+		UpdatedAt    time.Time               `json:"created_at"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		stateID := r.URL.Query().Get("q")
+		ctx := r.Context()
+		writer := h.NewLogWriter(w, r)
+
+		result, err := h.states.Sync(ctx, stateID)
+		if err != nil {
+			h.logger.Printf("HandlerSyncState: failed to sync state (stateID=%q): %v", stateID, err)
+			writer.WriteError(err)
+			return
+		}
+
+		writer.Write(Response{
+			Status: http.StatusOK,
+			Body: res{
+				State:        result.State,
+				TotalInserts: len(result.Inserts),
+				TotalUpdates: len(result.Updates),
+				TotalDeletes: len(result.Deletes),
+				Fails:        result.Fails,
+			},
+		})
+	}
+}
