@@ -124,8 +124,8 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SyncResult, error) 
 	// up to date zone data. This will
 	// be used to determine the zone
 	// delta (insert, update, delete).
-	storedZoneMap := ZoneURIMap{}
-	if err := storedZoneMap.Select(ctx, s.Store.DB, stateID); err != nil {
+	storedZoneMap, err := s.Store.SelectZonesWhereState(ctx, stateID)
+	if err != nil {
 		return SyncResult{}, fmt.Errorf("failed to select zones in database (stateID=%q): %w", stateID, err)
 	}
 

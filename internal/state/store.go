@@ -52,6 +52,13 @@ func (s *Store) UpdateEntity(ctx context.Context, state *Entity) (sql.Result, er
 	return state.Update(ctx, s.DB)
 }
 
+// SelectZonesWhereState selects all the zones
+// for a given state (stateID) as a ZoneURIMap.
+func (s *Store) SelectZonesWhereState(ctx context.Context, stateID string) (ZoneURIMap, error) {
+	storedZoneMap := ZoneURIMap{}
+	return storedZoneMap, storedZoneMap.Select(ctx, s.DB, stateID)
+}
+
 func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		return zone.Insert(ctx, tx)
