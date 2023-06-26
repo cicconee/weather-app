@@ -156,6 +156,7 @@ func (z ZoneURIMap) Select(ctx context.Context, db *sql.DB, state string) error 
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var e Zone
