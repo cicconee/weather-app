@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const API = "https://api.weather.gov"
@@ -127,4 +128,37 @@ func (c *Client) GetZone(zoneType string, zoneCode string) (Zone, error) {
 	}
 
 	return zone, nil
+}
+
+func (c *Client) GetActiveAlerts(states ...string) ([]Alert, error) {
+	if len(states) == 0 {
+		return []Alert{}, nil
+	}
+
+	collection, err := c.featureCollection(
+		fmt.Sprintf("%s/alerts/active?status=actual&area=%s",
+			API,
+			strings.Join(states, ",")))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get feature collection: %w", err)
+	}
+
+	var alerts []Alert
+	for _, f := range collection.Features {
+		var alert Alert
+		if err := json.Unmarshal(f.Properties, &alert); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal alert properties: %w", err)
+		}
+
+		geo, err := f.Geometry.ParsePolygon()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Geometry as a Polygon: %w", err)
+		}
+
+		alert.URI = f.ID
+		alert.Geometry = geo
+		alerts = append(alerts, alert)
+	}
+
+	return alerts, nil
 }

@@ -35,3 +35,23 @@ func (g *geo) ParseMultiPolygon() (geometry.MultiPolygon, error) {
 
 	return geo, nil
 }
+
+func (g *geo) ParsePolygon() (geometry.Polygon, error) {
+	var geo geometry.Polygon
+	var gErr error
+	switch g.Type {
+	case "":
+		return geometry.Polygon{}, nil
+	case "Polygon":
+		var polygon geometry.Polygon
+		gErr = json.Unmarshal(g.Coordinates, &polygon)
+		geo = polygon
+	default:
+		return nil, fmt.Errorf("unsupported geometry type: %s", g.Type)
+	}
+	if gErr != nil {
+		return nil, fmt.Errorf("failed parsing Polygon (Type: %s): %w", g.Type, gErr)
+	}
+
+	return geo, nil
+}
