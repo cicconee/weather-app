@@ -62,7 +62,7 @@ func (w *worker) SaveEach(ctx context.Context, zones []Zone) SaveZoneResult {
 	for range zones {
 		select {
 		case zone := <-w.dataCh:
-			if err := w.s.InsertZoneTx(ctx, zone); err != nil {
+			if err := w.s.InsertZoneTx(ctx, &zone); err != nil {
 				fails = append(fails, zone.SaveZoneFailure(err))
 			} else {
 				writes = append(writes, zone)

@@ -59,7 +59,11 @@ func (s *Store) SelectZonesWhereState(ctx context.Context, stateID string) (Zone
 	return storedZoneMap, storedZoneMap.Select(ctx, s.DB, stateID)
 }
 
-func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
+// InsertZoneTx writes zone to the database.
+// The zone ID, CreatedAt, and UpdatedAt field
+// will be set. If these are set before calling
+// the func, they will be ignored and overwritten.
+func (s *Store) InsertZoneTx(ctx context.Context, zone *Zone) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		return zone.Insert(ctx, tx)
 	})
@@ -76,7 +80,7 @@ func (s *Store) InsertZoneTx(ctx context.Context, zone Zone) error {
 //
 // If the zone UpdatedAt field is set it will be
 // overwritten.
-func (s *Store) UpdateZoneTx(ctx context.Context, zone Zone) error {
+func (s *Store) UpdateZoneTx(ctx context.Context, zone *Zone) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		zone.UpdatedAt = time.Now().UTC()
 		return zone.Update(ctx, tx)
