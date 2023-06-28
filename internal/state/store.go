@@ -64,13 +64,13 @@ func (s *Store) SelectZonesWhereState(ctx context.Context, stateID string) (Zone
 // will be set. If these are set before calling
 // the func, they will be ignored and overwritten.
 //
-// When a zone is inserted, any lonely_alerts
-// AlertZoneRelation associated with the zone will
-// be deleted from the database and transformed
-// into an alert_zones AlertZoneRelation. Lonely
-// alerts are designed to hold the place of an alert
-// zone before the zone is created. Since the zone
-// is being created, the alerts are no longer lonley.
+// When a zone is inserted, any lonely alerts
+// associated with zone will be deleted from the
+// database and transformed into an alert zone.
+// Lonely alerts are designed to hold the place of
+// an alert zone before the zone is created. Since
+// the zone is being created, the alerts are no
+// longer lonely.
 //
 // InsertZoneTx is wrapped in a database transaction.
 // If any operations fail the database will roll back.
