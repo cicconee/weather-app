@@ -63,9 +63,40 @@ func (s *Store) SelectZonesWhereState(ctx context.Context, stateID string) (Zone
 // The zone ID, CreatedAt, and UpdatedAt field
 // will be set. If these are set before calling
 // the func, they will be ignored and overwritten.
+//
+// When a zone is inserted, any lonely_alerts
+// AlertZoneRelation associated with the zone will
+// be deleted from the database and transformed
+// into an alert_zones AlertZoneRelation. Lonely
+// alerts are designed to hold the place of an alert
+// zone before the zone is created. Since the zone
+// is being created, the alerts are no longer lonley.
+//
+// InsertZoneTx is wrapped in a database transaction.
+// If any operations fail the database will roll back.
 func (s *Store) InsertZoneTx(ctx context.Context, zone *Zone) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
-		return zone.Insert(ctx, tx)
+		if err := zone.Insert(ctx, tx); err != nil {
+			return err
+		}
+
+		collection := LonelyAlertCollection{}
+		if err := collection.Select(ctx, tx, zone.URI); err != nil {
+			return err
+		}
+
+		for _, lonely := range collection {
+			alert := AlertZone{AlertID: lonely.AlertID, ZoneID: zone.ID}
+			if err := alert.Insert(ctx, tx); err != nil {
+				return fmt.Errorf("failed to insert alert zone (AlertID=%s, ZoneID=%d): %w", alert.AlertID, alert.ZoneID, err)
+			}
+
+			if err := lonely.Delete(ctx, tx); err != nil {
+				return fmt.Errorf("failed to delete lonely alert: %w", err)
+			}
+		}
+
+		return nil
 	})
 }
 
