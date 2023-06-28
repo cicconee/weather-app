@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/alert"
 	"github.com/cicconee/weather-app/internal/nws"
 	"github.com/cicconee/weather-app/internal/pool"
 	"github.com/cicconee/weather-app/internal/server"
@@ -35,9 +36,10 @@ func main() {
 	srv := server.Server{
 		Addr:     port,
 		Router:   chi.NewRouter(),
-		Interval: time.Second,
+		Interval: 10 * time.Second,
 		Logger:   log.Default(),
 		States:   state.New(nws.DefaultClient, db, pool),
+		Alerts:   alert.New(nws.DefaultClient, db),
 	}
 	if err := srv.Start(); err != nil {
 		log.Println(err)
