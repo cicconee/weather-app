@@ -126,28 +126,15 @@ func (s *Service) alerts(ctx context.Context, states StateCollection) ([]Resourc
 	}
 }
 
-// GetResponse is a collection of alerts
-// for a specific lon-lat coordinates.
-// It is returned by Get.
-type GetResponse struct {
-	Lon    float64    `json:"lon"`
-	Lat    float64    `json:"lat"`
-	Alerts []Response `json:"alerts"`
-}
-
 // Get gets all the active alerts for point
 // and returns it as a GetResponse.
-func (s *Service) Get(ctx context.Context, point geometry.Point) (GetResponse, error) {
+func (s *Service) Get(ctx context.Context, point geometry.Point) ([]Response, error) {
 	collection, err := s.Store.SelectAlertsContains(ctx, point)
 	if err != nil {
-		return GetResponse{}, err
+		return []Response{}, err
 	}
 
-	return GetResponse{
-		Lon:    point.Lon(),
-		Lat:    point.Lat(),
-		Alerts: collection.ResponseCollection(),
-	}, nil
+	return collection.ResponseCollection(), nil
 }
 
 // CleanUp will delete any alerts from the database

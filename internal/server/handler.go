@@ -111,6 +111,12 @@ func (h *Handler) HandleSyncState() http.HandlerFunc {
 }
 
 func (h *Handler) HandleGetAlerts() http.HandlerFunc {
+	type res struct {
+		Lon    float64          `json:"lon"`
+		Lat    float64          `json:"lat"`
+		Alerts []alert.Response `json:"alerts"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		lon := r.URL.Query().Get("lon")
@@ -124,7 +130,7 @@ func (h *Handler) HandleGetAlerts() http.HandlerFunc {
 			return
 		}
 
-		getResponse, err := h.alerts.Get(ctx, point)
+		alerts, err := h.alerts.Get(ctx, point)
 		if err != nil {
 			h.logger.Printf("HandleGetAlerts: failed to get alerts (point=%v): %v", point, err)
 			writer.WriteError(err)
@@ -133,7 +139,11 @@ func (h *Handler) HandleGetAlerts() http.HandlerFunc {
 
 		writer.Write(Response{
 			Status: http.StatusOK,
-			Body:   getResponse,
+			Body: res{
+				Lon:    point.Lon(),
+				Lat:    point.Lat(),
+				Alerts: alerts,
+			},
 		})
 	}
 }
