@@ -130,9 +130,9 @@ func (s *Service) alerts(ctx context.Context, states StateCollection) ([]Resourc
 // for a specific lon-lat coordinates.
 // It is returned by Get.
 type GetResponse struct {
-	Lon    float64         `json:"lon"`
-	Lat    float64         `json:"lat"`
-	Alerts AlertCollection `json:"alerts"`
+	Lon    float64    `json:"lon"`
+	Lat    float64    `json:"lat"`
+	Alerts []Response `json:"alerts"`
 }
 
 // Get gets all the active alerts for point
@@ -146,7 +146,7 @@ func (s *Service) Get(ctx context.Context, point geometry.Point) (GetResponse, e
 	return GetResponse{
 		Lon:    point.Lon(),
 		Lat:    point.Lat(),
-		Alerts: collection,
+		Alerts: collection.ResponseCollection(),
 	}, nil
 }
 

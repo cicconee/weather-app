@@ -8,6 +8,25 @@ import (
 	"github.com/cicconee/weather-app/internal/geometry"
 )
 
+// Response is a alert response. Response
+// can safely be consumed by a external
+// package.
+type Response struct {
+	ID          string     `json:"id"`
+	AreaDesc    string     `json:"area_desc"`
+	OnSet       *time.Time `json:"starts"`
+	Ends        *time.Time `json:"ends"`
+	Category    string     `json:"category"`
+	Severity    string     `json:"severity"`
+	Certainty   string     `json:"certainty"`
+	Urgency     string     `json:"urgency"`
+	Event       string     `json:"event"`
+	Headline    string     `json:"headline"`
+	Description string     `json:"description"`
+	Instruction string     `json:"instruction"`
+	Response    string     `json:"response"`
+}
+
 // Resource is a alert and all its relationships.
 type Resource struct {
 	// The alert to be mapped to references
@@ -108,6 +127,25 @@ type Alert struct {
 	CreatedAt time.Time
 }
 
+// AsResponse returns this alert as a Response.
+func (a *Alert) AsResponse() Response {
+	return Response{
+		ID:          a.ID,
+		AreaDesc:    a.AreaDesc,
+		OnSet:       a.OnSet,
+		Ends:        a.Ends,
+		Category:    a.Category,
+		Severity:    a.Severity,
+		Certainty:   a.Certainty,
+		Urgency:     a.Urgency,
+		Event:       a.Event,
+		Headline:    a.Headline,
+		Description: a.Description,
+		Instruction: a.Instruction,
+		Response:    a.Response,
+	}
+}
+
 func (a *Alert) Scan(scanner Scanner) error {
 	return scanner.Scan(
 		&a.ID,
@@ -197,6 +235,16 @@ func (a *Alert) sqlPoints() sql.NullString {
 // AlertCollection is used to read and delete
 // collections of alerts.
 type AlertCollection []Alert
+
+// ResponseCollection returns this alert
+// collection as a collection of responses.
+func (a *AlertCollection) ResponseCollection() []Response {
+	response := []Response{}
+	for _, alert := range *a {
+		response = append(response, alert.AsResponse())
+	}
+	return response
+}
 
 // SelectPointless reads a collection of alerts
 // that do not have a defined geometric bounds and

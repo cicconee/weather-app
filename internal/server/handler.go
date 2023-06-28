@@ -1,16 +1,21 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/alert"
+	"github.com/cicconee/weather-app/internal/geometry"
 	"github.com/cicconee/weather-app/internal/state"
 )
 
 type Handler struct {
 	logger *log.Logger
 	states *state.Service
+	alerts *alert.Service
 }
 
 func NewHandler(l *log.Logger) *Handler {
@@ -103,4 +108,46 @@ func (h *Handler) HandleSyncState() http.HandlerFunc {
 			},
 		})
 	}
+}
+
+func (h *Handler) HandleGetAlerts() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		lon := r.URL.Query().Get("lon")
+		lat := r.URL.Query().Get("lat")
+		writer := h.NewLogWriter(w, r)
+
+		point, err := extractPoint(lon, lat)
+		if err != nil {
+			h.logger.Printf("HandleGetAlerts: failed to extract point (lon=%q, lat=%q): %v", lon, lat, err)
+			writer.WriteError(err)
+			return
+		}
+
+		getResponse, err := h.alerts.Get(ctx, point)
+		if err != nil {
+			h.logger.Printf("HandleGetAlerts: failed to get alerts (point=%v): %v", point, err)
+			writer.WriteError(err)
+			return
+		}
+
+		writer.Write(Response{
+			Status: http.StatusOK,
+			Body:   getResponse,
+		})
+	}
+}
+
+func extractPoint(lonStr string, latStr string) (geometry.Point, error) {
+	lon, err := strconv.ParseFloat(lonStr, 64)
+	if err != nil {
+		return geometry.Point{}, fmt.Errorf("failed to parse lon: %w", err)
+	}
+
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		return geometry.Point{}, fmt.Errorf("failed to parse lat: %w", err)
+	}
+
+	return geometry.NewPoint(lon, lat), nil
 }

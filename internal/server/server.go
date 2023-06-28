@@ -51,6 +51,7 @@ func (s *Server) interval() time.Duration {
 func (s *Server) init() {
 	s.handler = NewHandler(s.Logger)
 	s.handler.states = s.States
+	s.handler.alerts = s.Alerts
 	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)
@@ -71,6 +72,7 @@ func (s *Server) setRoutes() {
 	s.Router.Get("/", s.handler.HelloWorld())
 	s.Router.Post("/states", s.handler.HandleCreateState())
 	s.Router.Post("/states/sync", s.handler.HandleSyncState())
+	s.Router.Get("/alerts", s.handler.HandleGetAlerts())
 }
 
 func (s *Server) run(runFn func()) {
