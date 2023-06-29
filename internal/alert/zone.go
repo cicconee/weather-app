@@ -5,8 +5,8 @@ import (
 	"database/sql"
 )
 
-// Zone is a geographical location in
-// a state.
+// Zone is a geographical location that
+// an alert belongs to.
 type Zone struct {
 	// The identifier of a zone.
 	ID int
