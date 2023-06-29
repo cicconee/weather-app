@@ -70,7 +70,7 @@ func (s *Store) SelectAlertsContains(ctx context.Context, point geometry.Point) 
 // from the database. All states in the database
 // will reside in this collection.
 func (s *Store) SelectStates(ctx context.Context) (StateCollection, error) {
-	var collection StateCollection
+	collection := StateCollection{}
 	return collection, collection.Select(ctx, s.DB)
 }
 
