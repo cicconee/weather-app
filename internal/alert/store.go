@@ -51,14 +51,14 @@ func (s *Store) SelectAlert(ctx context.Context, id string) (Alert, error) {
 func (s *Store) SelectAlertsContains(ctx context.Context, point geometry.Point) (AlertCollection, error) {
 	collection := AlertCollection{}
 
-	// Get all the alerts where the geometric bounds
-	// are determined through the mapping to zones.
+	// Get all the alerts that have a specified
+	// geometric bounds.
 	if err := collection.Select(ctx, s.DB, point); err != nil {
 		return AlertCollection{}, err
 	}
 
-	// Get all the alerts that have a specified
-	// geometric bounds.
+	// Get all the alerts where the geometric bounds
+	// are determined through the mapping to zones.
 	if err := collection.SelectPointless(ctx, s.DB, point); err != nil {
 		return AlertCollection{}, err
 	}
