@@ -59,13 +59,13 @@ func New(api ForecastAPI, db *sql.DB) *Service {
 
 // Get will get the hourly forecast periods for the specified point.
 func (s *Service) Get(ctx context.Context, point geometry.Point) (PeriodCollection, error) {
-	gridpoint := GridpointEntity{}
-	if err := gridpoint.Select(ctx, s.DB, point); err != nil {
+	gridpoint, err := s.Store.SelectGridpoint(ctx, point)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return s.write(ctx, point)
 		}
 
-		return PeriodCollection{}, fmt.Errorf("selecting gridpoint: %w", err)
+		return PeriodCollection{}, fmt.Errorf("selecting gridpoint (point=%v): %w", point, err)
 	}
 
 	if time.Now().After(gridpoint.Timeline.ExpiresAt) {
