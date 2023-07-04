@@ -13,17 +13,19 @@ import (
 	"time"
 
 	"github.com/cicconee/weather-app/internal/alert"
+	"github.com/cicconee/weather-app/internal/forecast"
 	"github.com/cicconee/weather-app/internal/state"
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	Router   *chi.Mux
-	Addr     string
-	Interval time.Duration
-	Logger   *log.Logger
-	States   *state.Service
-	Alerts   *alert.Service
+	Router    *chi.Mux
+	Addr      string
+	Interval  time.Duration
+	Logger    *log.Logger
+	States    *state.Service
+	Alerts    *alert.Service
+	Forecasts *forecast.Service
 
 	handler      *Handler
 	shutdownCh   chan os.Signal
@@ -52,6 +54,7 @@ func (s *Server) init() {
 	s.handler = NewHandler(s.Logger)
 	s.handler.states = s.States
 	s.handler.alerts = s.Alerts
+	s.handler.forecasts = s.Forecasts
 	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)
@@ -73,6 +76,7 @@ func (s *Server) setRoutes() {
 	s.Router.Post("/states", s.handler.HandleCreateState())
 	s.Router.Post("/states/sync", s.handler.HandleSyncState())
 	s.Router.Get("/alerts", s.handler.HandleGetAlerts())
+	s.Router.Get("/forecasts", s.handler.HandleGetForecast())
 }
 
 func (s *Server) run(runFn func()) {
@@ -138,6 +142,10 @@ func (s *Server) validate() error {
 
 	if s.Alerts == nil {
 		return errors.New("alerts is nil")
+	}
+
+	if s.Forecasts == nil {
+		return errors.New("forecasts is nil")
 	}
 
 	return nil

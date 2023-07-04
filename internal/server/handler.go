@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/cicconee/weather-app/internal/alert"
+	"github.com/cicconee/weather-app/internal/forecast"
 	"github.com/cicconee/weather-app/internal/state"
 )
 
 type Handler struct {
-	logger *log.Logger
-	states *state.Service
-	alerts *alert.Service
+	logger    *log.Logger
+	states    *state.Service
+	alerts    *alert.Service
+	forecasts *forecast.Service
 }
 
 func NewHandler(l *log.Logger) *Handler {
@@ -140,6 +142,44 @@ func (h *Handler) HandleGetAlerts() http.HandlerFunc {
 				Lon:    point.Lon(),
 				Lat:    point.Lat(),
 				Alerts: alerts,
+			},
+		})
+	}
+}
+
+func (h *Handler) HandleGetForecast() http.HandlerFunc {
+	type res struct {
+		Lon      float64                   `json:"lon"`
+		Lat      float64                   `json:"lat"`
+		Forecast forecast.PeriodCollection `json:"forecast"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		lon := r.URL.Query().Get("lon")
+		lat := r.URL.Query().Get("lat")
+		writer := h.NewLogWriter(w, r)
+
+		point, err := ParsePoint(lon, lat)
+		if err != nil {
+			h.logger.Printf("HandleGetForecast: extracting point (lon=%q, lat=%q): %v\n", lon, lat, err)
+			writer.WriteError(err)
+			return
+		}
+
+		periods, err := h.forecasts.Get(ctx, point)
+		if err != nil {
+			h.logger.Printf("HandleGetForecast: getting forecast (point=%v): %v\n", point, err)
+			writer.WriteError(err)
+			return
+		}
+
+		writer.Write(Response{
+			Status: http.StatusOK,
+			Body: res{
+				Lon:      point.Lon(),
+				Lat:      point.Lat(),
+				Forecast: periods,
 			},
 		})
 	}

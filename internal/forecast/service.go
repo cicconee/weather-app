@@ -45,6 +45,14 @@ type Service struct {
 	DB *sql.DB
 }
 
+// New will return a pointer to a Service.
+func New(api ForecastAPI, db *sql.DB) *Service {
+	return &Service{
+		API: api,
+		DB:  db,
+	}
+}
+
 // Get will get the hourly forecast periods for the specified point.
 func (s *Service) Get(ctx context.Context, point geometry.Point) (PeriodCollection, error) {
 	gridpoint := GridpointEntity{}
