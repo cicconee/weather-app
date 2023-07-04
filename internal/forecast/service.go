@@ -126,13 +126,13 @@ func (s *Service) write(ctx context.Context, point geometry.Point) (PeriodCollec
 	gridpointEntity := gridpointResource.ToGridpointEntity()
 	gridpointEntity.Geometry = hourlyResource.Geometry
 	gridpointEntity.Timeline = hourlyResource.Timeline()
-	if err := gridpointEntity.Insert(ctx, s.DB); err != nil {
-		return PeriodCollection{}, fmt.Errorf("write: inserting gridpoint: %w", err)
-	}
-
 	periodEntityCollection := hourlyResource.ToPeriodEntityCollection()
-	if err := periodEntityCollection.Insert(ctx, s.DB, gridpointEntity.ID); err != nil {
-		return PeriodCollection{}, fmt.Errorf("write: inserting periods: %w", err)
+	err = s.Store.InsertGridpointPeriodsTx(ctx, GridpointPeriodsTxParams{
+		Gridpoint: &gridpointEntity,
+		Periods:   periodEntityCollection,
+	})
+	if err != nil {
+		return PeriodCollection{}, err
 	}
 
 	location, err := time.LoadLocation(gridpointEntity.TimeZone)

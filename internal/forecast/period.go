@@ -154,7 +154,7 @@ func (p *PeriodEntity) Scan(scanner Scanner) error {
 
 // Insert writes this PeriodEntity into the database. All fields being written
 // must be set before calling this method.
-func (p *PeriodEntity) Insert(ctx context.Context, db *sql.DB) error {
+func (p *PeriodEntity) Insert(ctx context.Context, db Execer) error {
 	query := `INSERT INTO periods(num, starts, ends, is_day_time, temp, temp_unit, wind_speed,
 			  wind_direction, short_forecast, gp_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
@@ -238,7 +238,7 @@ func (p *PeriodEntityCollection) Select(ctx context.Context, db *sql.DB, gridpoi
 // database. The GridpointID of each PeriodEntity is set to gridpointID before
 // being written. All other fields must be set for each PeriodEntity before
 // calling this method.
-func (p *PeriodEntityCollection) Insert(ctx context.Context, db *sql.DB, gridpointID int) error {
+func (p *PeriodEntityCollection) Insert(ctx context.Context, db Execer, gridpointID int) error {
 	for i := range *p {
 		entity := &(*p)[i]
 		entity.GridpointID = gridpointID

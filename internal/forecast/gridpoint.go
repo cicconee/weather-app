@@ -103,7 +103,7 @@ func (g *GridpointEntity) Select(ctx context.Context, db *sql.DB, point geometry
 
 // Insert writes this GridpointEntity into the database and sets this
 // GridpointEntity ID field.
-func (g *GridpointEntity) Insert(ctx context.Context, db *sql.DB) error {
+func (g *GridpointEntity) Insert(ctx context.Context, db QueryRower) error {
 	query := `INSERT INTO gridpoints(grid_id, grid_x, grid_y, generated_at, expires_at, timezone, 
 			  boundary) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 
