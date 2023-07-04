@@ -135,7 +135,16 @@ func (s *Service) write(ctx context.Context, point geometry.Point) (PeriodCollec
 		return PeriodCollection{}, fmt.Errorf("write: inserting periods: %w", err)
 	}
 
-	return periodEntityCollection.ToPeriods(), nil
+	location, err := time.LoadLocation(gridpointEntity.TimeZone)
+	if err != nil {
+		return PeriodCollection{}, fmt.Errorf("write: loading location (name=%s): %w", gridpointEntity.TimeZone, err)
+	}
+
+	periodCollection := periodEntityCollection.ToPeriods()
+	periodCollection.loadTimeZone(location)
+	periodCollection.Sort()
+
+	return periodCollection, nil
 }
 
 // update will get the hourly forecast data for a gridpoint from the NWS API. Once
