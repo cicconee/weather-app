@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/cicconee/weather-app/internal/app"
+	"github.com/cicconee/weather-app/internal/forecast"
 )
 
 const API = "https://api.weather.gov"
@@ -55,6 +58,7 @@ func (c *Client) featureCollection(url string) (*featureCollection, error) {
 	}
 	defer res.Body.Close()
 
+	// TODO: use app.NWSAPIStatusCodeError instead of StatusCodeError
 	if res.StatusCode != http.StatusOK {
 		var statusErr *StatusCodeError
 		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
@@ -79,6 +83,7 @@ func (c *Client) feature(url string) (*feature, error) {
 	}
 	defer res.Body.Close()
 
+	// TODO: use app.NWSAPIStatusCodeError instead of StatusCodeError
 	if res.StatusCode != http.StatusOK {
 		var statusErr *StatusCodeError
 		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
@@ -161,4 +166,65 @@ func (c *Client) GetActiveAlerts(states ...string) ([]Alert, error) {
 	}
 
 	return alerts, nil
+}
+
+func (c *Client) GetGridpoint(x, y float64) (forecast.GridpointAPIResource, error) {
+	feature, err := c.featureUsingAppError(fmt.Sprintf("%s/points/%f,%f", API, x, y))
+	if err != nil {
+		return forecast.GridpointAPIResource{}, err
+	}
+
+	gridpoint := forecast.GridpointAPIResource{}
+	if err := json.Unmarshal(feature.Properties, &gridpoint); err != nil {
+		return forecast.GridpointAPIResource{}, fmt.Errorf("parsing gridpoint: %w", err)
+	}
+
+	return gridpoint, nil
+}
+
+func (c *Client) GetHourlyForecast(id string, x, y int) (forecast.HourlyAPIResource, error) {
+	feature, err := c.featureUsingAppError(fmt.Sprintf("%s/gridpoints/%s/%d,%d/forecast/hourly?units=us",
+		API, id, x, y))
+	if err != nil {
+		return forecast.HourlyAPIResource{}, err
+	}
+
+	hourly := forecast.HourlyAPIResource{}
+	if err := json.Unmarshal(feature.Properties, &hourly); err != nil {
+		return forecast.HourlyAPIResource{}, fmt.Errorf("nws: failed to parse forecast.Hourly: %w", err)
+	}
+
+	polygon, err := feature.Geometry.ParsePolygon()
+	if err != nil {
+		return forecast.HourlyAPIResource{}, fmt.Errorf("nws: failed to parse forecast geometry: %w", err)
+	}
+
+	hourly.Geometry = polygon
+
+	return hourly, nil
+}
+
+func (c *Client) featureUsingAppError(url string) (*feature, error) {
+	res, err := c.get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting http response: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		var statusErr *app.NWSAPIStatusCodeError
+		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
+			statusErr = &app.NWSAPIStatusCodeError{StatusCode: res.StatusCode}
+			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
+		}
+
+		return nil, statusErr
+	}
+
+	var f feature
+	if err := json.NewDecoder(res.Body).Decode(&f); err != nil {
+		return nil, fmt.Errorf("failed decoding http response: %w", err)
+	}
+
+	return &f, nil
 }
