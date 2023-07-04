@@ -43,13 +43,17 @@ type Service struct {
 
 	// The database connection.
 	DB *sql.DB
+
+	// The database storage.
+	Store *Store
 }
 
 // New will return a pointer to a Service.
 func New(api ForecastAPI, db *sql.DB) *Service {
 	return &Service{
-		API: api,
-		DB:  db,
+		API:   api,
+		DB:    db,
+		Store: NewStore(db),
 	}
 }
 
