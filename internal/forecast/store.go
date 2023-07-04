@@ -25,3 +25,10 @@ func (s *Store) SelectGridpoint(ctx context.Context, point geometry.Point) (Grid
 	gridpoint := GridpointEntity{}
 	return gridpoint, gridpoint.Select(ctx, s.DB, point)
 }
+
+// SelectPeriodCollection reads the PeriodEntity that belong to a gridpoint
+// from the database and returns them in a PeriodEntityCollection.
+func (s *Store) SelectPeriodCollection(ctx context.Context, gridpointID int) (PeriodEntityCollection, error) {
+	periodCollection := PeriodEntityCollection{}
+	return periodCollection, periodCollection.Select(ctx, s.DB, gridpointID)
+}

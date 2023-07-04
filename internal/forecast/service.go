@@ -72,9 +72,9 @@ func (s *Service) Get(ctx context.Context, point geometry.Point) (PeriodCollecti
 		return s.update(ctx, gridpoint)
 	}
 
-	periodEntityCollection := PeriodEntityCollection{}
-	if err := periodEntityCollection.Select(ctx, s.DB, gridpoint.ID); err != nil {
-		return PeriodCollection{}, fmt.Errorf("selecting periods (gridpointID=%d): %w", gridpoint.ID, err)
+	periodEntityCollection, err := s.Store.SelectPeriodCollection(ctx, gridpoint.ID)
+	if err != nil {
+		return PeriodCollection{}, fmt.Errorf("selecting periods (gridpoint.ID=%d): %w", gridpoint.ID, err)
 	}
 
 	location, err := time.LoadLocation(gridpoint.TimeZone)
