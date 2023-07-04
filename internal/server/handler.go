@@ -177,8 +177,8 @@ func (h *Handler) HandleGetForecast() http.HandlerFunc {
 		writer.Write(Response{
 			Status: http.StatusOK,
 			Body: res{
-				Lon:      point.Lon(),
-				Lat:      point.Lat(),
+				Lon:      point.RoundedLon(),
+				Lat:      point.RoundedLat(),
 				Forecast: periods,
 			},
 		})
