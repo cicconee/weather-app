@@ -240,7 +240,7 @@ func (p *PeriodEntityCollection) Select(ctx context.Context, db *sql.DB, gridpoi
 // calling this method.
 func (p *PeriodEntityCollection) Insert(ctx context.Context, db *sql.DB, gridpointID int) error {
 	for i := range *p {
-		entity := (*p)[i]
+		entity := &(*p)[i]
 		entity.GridpointID = gridpointID
 		if err := entity.Insert(ctx, db); err != nil {
 			return err
@@ -256,7 +256,7 @@ func (p *PeriodEntityCollection) Insert(ctx context.Context, db *sql.DB, gridpoi
 // calling this method.
 func (p *PeriodEntityCollection) Update(ctx context.Context, db *sql.DB, gridpointID int) error {
 	for i := range *p {
-		entity := (*p)[i]
+		entity := &(*p)[i]
 		entity.GridpointID = gridpointID
 		if err := entity.Update(ctx, db); err != nil {
 			return err
