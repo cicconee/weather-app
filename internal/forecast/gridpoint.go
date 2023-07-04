@@ -98,7 +98,7 @@ func (g *GridpointEntity) Select(ctx context.Context, db *sql.DB, point geometry
 	query := `SELECT id, grid_id, grid_x, grid_y, generated_at, expires_at, timezone
 			  FROM gridpoints WHERE boundary @> $1`
 
-	return g.Scan(db.QueryRowContext(ctx, query, point.String()))
+	return g.Scan(db.QueryRowContext(ctx, query, point.RoundedString()))
 }
 
 // Insert writes this GridpointEntity into the database and sets this
