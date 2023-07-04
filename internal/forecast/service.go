@@ -165,15 +165,15 @@ func (s *Service) update(ctx context.Context, gridpoint GridpointEntity) (Period
 	}
 
 	gridpoint.Timeline = hourlyResource.Timeline()
-	if err := gridpoint.Update(ctx, s.DB); err != nil {
-		return PeriodCollection{},
-			fmt.Errorf("update: updating gridpoint (gridpoint.ID=%d): %w", gridpoint.ID, err)
-	}
-
 	periodEntityCollection := hourlyResource.ToPeriodEntityCollection()
-	if err := periodEntityCollection.Update(ctx, s.DB, gridpoint.ID); err != nil {
-		return PeriodCollection{},
-			fmt.Errorf("update: updating periods (gridpoint.ID=%d): %w", gridpoint.ID, err)
+	err = s.Store.UpdateGridpointPeriodTx(ctx, GridpointPeriodsTxParams{
+		Gridpoint: &gridpoint,
+		Periods:   periodEntityCollection,
+	})
+	if err != nil {
+		return PeriodCollection{}, fmt.Errorf("update: updating gridpoint and periods (gridpoint.ID=%d): %w",
+			gridpoint.ID,
+			err)
 	}
 
 	return periodEntityCollection.ToPeriods(), nil

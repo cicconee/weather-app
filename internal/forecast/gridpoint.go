@@ -121,7 +121,7 @@ func (g *GridpointEntity) Insert(ctx context.Context, db QueryRower) error {
 // can be updated.
 //
 // The only fields that need to be set are the ID and Timeline.
-func (g *GridpointEntity) Update(ctx context.Context, db *sql.DB) error {
+func (g *GridpointEntity) Update(ctx context.Context, db Execer) error {
 	query := `UPDATE gridpoints SET generated_at = $1, expires_at = $2
 			  WHERE id = $3`
 

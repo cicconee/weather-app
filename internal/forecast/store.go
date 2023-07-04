@@ -77,3 +77,23 @@ func (s *Store) InsertGridpointPeriodsTx(ctx context.Context, p GridpointPeriods
 		return nil
 	})
 }
+
+// UpdateGridpointPeriodTx writes the GridpointEntity and PeriodEntityCollection
+// to the database as an update. All the PeriodEntity in the PeriodEntityCollection
+// will have the GridpointID field set.
+//
+// UpdateGridpointPeriodTx is wrapped in a database transaction. If any database
+// operation fail, the database will rollback.
+func (s *Store) UpdateGridpointPeriodTx(ctx context.Context, p GridpointPeriodsTxParams) error {
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		if err := p.Gridpoint.Update(ctx, tx); err != nil {
+			return err
+		}
+
+		if err := p.Periods.Update(ctx, tx, p.Gridpoint.ID); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}

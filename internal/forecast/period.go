@@ -177,7 +177,7 @@ func (p *PeriodEntity) Insert(ctx context.Context, db Execer) error {
 // database is identified by this PeriodEntity Number and GridpointID fields.
 // All fields being updated must be set before calling this method. Number and
 // GridpointID cannot be updated.
-func (p *PeriodEntity) Update(ctx context.Context, db *sql.DB) error {
+func (p *PeriodEntity) Update(ctx context.Context, db Execer) error {
 	query := `UPDATE periods SET starts = $1, ends = $2, is_day_time = $3, temp = $4,
 			  temp_unit = $5, wind_speed = $6, wind_direction = $7, short_forecast = $8
 			  WHERE num = $9 AND gp_id = $10`
@@ -254,7 +254,7 @@ func (p *PeriodEntityCollection) Insert(ctx context.Context, db Execer, gridpoin
 // database as an update. The GridpointID of each PeriodEntity is set to gridpointID
 // before being written. All other fields must be set for each PeriodEntity before
 // calling this method.
-func (p *PeriodEntityCollection) Update(ctx context.Context, db *sql.DB, gridpointID int) error {
+func (p *PeriodEntityCollection) Update(ctx context.Context, db Execer, gridpointID int) error {
 	for i := range *p {
 		entity := &(*p)[i]
 		entity.GridpointID = gridpointID
