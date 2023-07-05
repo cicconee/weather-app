@@ -200,12 +200,18 @@ func (p *PeriodEntity) Update(ctx context.Context, db Execer) error {
 // PeriodEntityCollection is a collection of PeriodEntity.
 type PeriodEntityCollection []PeriodEntity
 
-// ToPeriods returns this PeriodEntityCollection as a PeriodCollection.
-func (p *PeriodEntityCollection) ToPeriods() PeriodCollection {
+// ToPeriods returns this PeriodEntityCollection as a sorted
+// PeriodCollection. The loc is applied to each Period
+// StartTime and EndTime.
+func (p *PeriodEntityCollection) ToPeriods(loc *time.Location) PeriodCollection {
 	periods := PeriodCollection{}
 	for _, entity := range *p {
 		periods = append(periods, entity.ToPeriod())
 	}
+
+	periods.Sort()
+	periods.loadTimeZone(loc)
+
 	return periods
 }
 
