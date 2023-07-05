@@ -176,7 +176,16 @@ func (s *Service) update(ctx context.Context, gridpoint GridpointEntity) (Period
 			err)
 	}
 
-	return periodEntityCollection.ToPeriods(), nil
+	location, err := time.LoadLocation(gridpoint.TimeZone)
+	if err != nil {
+		return PeriodCollection{}, fmt.Errorf("update: loading location (name=%s): %w", gridpoint.TimeZone, err)
+	}
+
+	periodCollection := periodEntityCollection.ToPeriods()
+	periodCollection.loadTimeZone(location)
+	periodCollection.Sort()
+
+	return periodCollection, nil
 }
 
 // gridpoint calls the GetGridpoint method of ForecastAPI for a point.
