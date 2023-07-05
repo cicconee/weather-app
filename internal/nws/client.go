@@ -58,12 +58,11 @@ func (c *Client) featureCollection(url string) (*featureCollection, error) {
 	}
 	defer res.Body.Close()
 
-	// TODO: use app.NWSAPIStatusCodeError instead of StatusCodeError
 	if res.StatusCode != http.StatusOK {
-		var statusErr *StatusCodeError
+		var statusErr *app.NWSAPIStatusCodeError
 		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
-			statusErr = &StatusCodeError{StatusCode: res.StatusCode}
-			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
+			statusErr = &app.NWSAPIStatusCodeError{StatusCode: res.StatusCode}
+			return nil, fmt.Errorf("%w: failed to decode app.NWSAPIStatusCodeError Detail field: %v", statusErr, err)
 		}
 		return nil, statusErr
 	}
@@ -83,12 +82,11 @@ func (c *Client) feature(url string) (*feature, error) {
 	}
 	defer res.Body.Close()
 
-	// TODO: use app.NWSAPIStatusCodeError instead of StatusCodeError
 	if res.StatusCode != http.StatusOK {
-		var statusErr *StatusCodeError
+		var statusErr *app.NWSAPIStatusCodeError
 		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
-			statusErr = &StatusCodeError{StatusCode: res.StatusCode}
-			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
+			statusErr = &app.NWSAPIStatusCodeError{StatusCode: res.StatusCode}
+			return nil, fmt.Errorf("%w: failed to decode app.NWSAPIStatusCodeError Detail field: %v", statusErr, err)
 		}
 
 		return nil, statusErr
@@ -169,7 +167,7 @@ func (c *Client) GetActiveAlerts(states ...string) ([]Alert, error) {
 }
 
 func (c *Client) GetGridpoint(x, y float64) (forecast.GridpointAPIResource, error) {
-	feature, err := c.featureUsingAppError(fmt.Sprintf("%s/points/%f,%f", API, x, y))
+	feature, err := c.feature(fmt.Sprintf("%s/points/%f,%f", API, x, y))
 	if err != nil {
 		return forecast.GridpointAPIResource{}, err
 	}
@@ -183,7 +181,7 @@ func (c *Client) GetGridpoint(x, y float64) (forecast.GridpointAPIResource, erro
 }
 
 func (c *Client) GetHourlyForecast(id string, x, y int) (forecast.HourlyAPIResource, error) {
-	feature, err := c.featureUsingAppError(fmt.Sprintf("%s/gridpoints/%s/%d,%d/forecast/hourly?units=us",
+	feature, err := c.feature(fmt.Sprintf("%s/gridpoints/%s/%d,%d/forecast/hourly?units=us",
 		API, id, x, y))
 	if err != nil {
 		return forecast.HourlyAPIResource{}, err
@@ -202,29 +200,4 @@ func (c *Client) GetHourlyForecast(id string, x, y int) (forecast.HourlyAPIResou
 	hourly.Geometry = polygon
 
 	return hourly, nil
-}
-
-func (c *Client) featureUsingAppError(url string) (*feature, error) {
-	res, err := c.get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed getting http response: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		var statusErr *app.NWSAPIStatusCodeError
-		if err := json.NewDecoder(res.Body).Decode(&statusErr); err != nil {
-			statusErr = &app.NWSAPIStatusCodeError{StatusCode: res.StatusCode}
-			return nil, fmt.Errorf("%w: failed to decode StatusCodeError Detail field: %v", statusErr, err)
-		}
-
-		return nil, statusErr
-	}
-
-	var f feature
-	if err := json.NewDecoder(res.Body).Decode(&f); err != nil {
-		return nil, fmt.Errorf("failed decoding http response: %w", err)
-	}
-
-	return &f, nil
 }

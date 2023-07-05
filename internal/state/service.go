@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/app"
 	"github.com/cicconee/weather-app/internal/nws"
 	"github.com/cicconee/weather-app/internal/pool"
 )
@@ -255,7 +256,7 @@ func (s *Service) delta(updatedZones []Zone, storedZones ZoneURIMap) *ZoneDelta 
 
 func (s *Service) zones(stateID string) ([]Zone, error) {
 	zones, err := s.Client.GetZoneCollection(stateID)
-	var statusError *nws.StatusCodeError
+	var statusError *app.NWSAPIStatusCodeError
 	switch {
 	case err == nil:
 		return zonesFromNWS(zones), nil

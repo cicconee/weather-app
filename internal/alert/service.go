@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/app"
 	"github.com/cicconee/weather-app/internal/geometry"
 	"github.com/cicconee/weather-app/internal/nws"
 )
@@ -107,7 +108,7 @@ func (s *Service) write(ctx context.Context, e Resource, sync *SyncResult) {
 
 func (s *Service) alerts(ctx context.Context, states StateCollection) ([]Resource, error) {
 	alerts, err := s.Client.GetActiveAlerts(states.AsStrings()...)
-	var statusError *nws.StatusCodeError
+	var statusError *app.NWSAPIStatusCodeError
 	switch {
 	case err == nil:
 		return resourcesFromNWS(alerts), nil
