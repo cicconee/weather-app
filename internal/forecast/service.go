@@ -41,9 +41,6 @@ type Service struct {
 	// the hourly forecasts.
 	API ForecastAPI
 
-	// The database connection.
-	DB *sql.DB
-
 	// The database storage.
 	Store *Store
 }
@@ -52,7 +49,6 @@ type Service struct {
 func New(api ForecastAPI, db *sql.DB) *Service {
 	return &Service{
 		API:   api,
-		DB:    db,
 		Store: NewStore(db),
 	}
 }
