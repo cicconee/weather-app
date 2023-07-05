@@ -16,14 +16,14 @@ import (
 // number corresponds to moving forward in time.
 type Period struct {
 	Number          int       `json:"number"`
-	StartTime       time.Time `json:"startTime"`
-	EndTime         time.Time `json:"endTime"`
-	IsDaytime       bool      `json:"isDaytime"`
+	StartTime       time.Time `json:"start_time"`
+	EndTime         time.Time `json:"end_time"`
+	IsDaytime       bool      `json:"is_day_time"`
 	Temperature     int       `json:"temperature"`
-	TemperatureUnit string    `json:"temperatureUnit"`
-	WindSpeed       string    `json:"windSpeed"`
-	WindDirection   string    `json:"windDirection"`
-	ShortForecast   string    `json:"shortForecast"`
+	TemperatureUnit string    `json:"temperature_unit"`
+	WindSpeed       string    `json:"wind_speed"`
+	WindDirection   string    `json:"wind_direction"`
+	ShortForecast   string    `json:"short_forecast"`
 }
 
 // loadTimeZone formats the StartTime and EndTime of this Period to loc.
