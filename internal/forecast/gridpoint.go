@@ -2,7 +2,6 @@ package forecast
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/cicconee/weather-app/internal/geometry"
 )
@@ -94,7 +93,7 @@ func (g *GridpointEntity) Scan(scanner Scanner) error {
 
 // Select reads a gridpoint into this GridpointEntity where point resides inside
 // its geometric bounds.
-func (g *GridpointEntity) Select(ctx context.Context, db *sql.DB, point geometry.Point) error {
+func (g *GridpointEntity) Select(ctx context.Context, db QueryRower, point geometry.Point) error {
 	query := `SELECT id, grid_id, grid_x, grid_y, generated_at, expires_at, timezone
 			  FROM gridpoints WHERE boundary @> $1`
 
