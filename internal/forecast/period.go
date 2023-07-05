@@ -2,7 +2,6 @@ package forecast
 
 import (
 	"context"
-	"database/sql"
 	"sort"
 	"time"
 )
@@ -217,7 +216,7 @@ func (p *PeriodEntityCollection) ToPeriods(loc *time.Location) PeriodCollection 
 
 // Select reads all the periods in ascending order from the database that
 // belong to the specified gridpoint into this PeriodEntityCollection.
-func (p *PeriodEntityCollection) Select(ctx context.Context, db *sql.DB, gridpointID int) error {
+func (p *PeriodEntityCollection) Select(ctx context.Context, db Queryer, gridpointID int) error {
 	query := `SELECT num, starts, ends, is_day_time, temp, temp_unit, wind_speed, 
 			  wind_direction, short_forecast, gp_id FROM periods 
 			  WHERE gp_id = $1 
