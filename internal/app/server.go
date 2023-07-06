@@ -9,26 +9,34 @@ package app
 // to be displayed to external sources.
 type ServerResponseError struct {
 	// The wrapped error.
-	error
+	Err error
 
 	// The HTTP response body.
-	msg string
+	Msg string
 
 	// The HTTP status code.
-	statusCode int
+	StatusCode int
 }
 
 // NewServerResponseError returns a pointer to a ServerResponseError
 // set with the data provided.
 func NewServerResponseError(err error, msg string, statusCode int) *ServerResponseError {
 	return &ServerResponseError{
-		error:      err,
-		msg:        msg,
-		statusCode: statusCode,
+		Err:        err,
+		Msg:        msg,
+		StatusCode: statusCode,
 	}
 }
 
 // ServerErrorResponse returns the status code and the response body.
 func (e *ServerResponseError) ServerErrorResponse() (int, string) {
-	return e.statusCode, e.msg
+	return e.StatusCode, e.Msg
+}
+
+func (e *ServerResponseError) Unwrap() error {
+	return e.Err
+}
+
+func (e *ServerResponseError) Error() string {
+	return e.Err.Error()
 }
