@@ -86,7 +86,7 @@ func (h *Handler) HandleSyncState() http.HandlerFunc {
 		TotalUpdates int                     `json:"total_updates"`
 		TotalDeletes int                     `json:"total_deletes"`
 		Fails        []state.SyncZoneFailure `json:"fails"`
-		UpdatedAt    time.Time               `json:"created_at"`
+		UpdatedAt    time.Time               `json:"updated_at"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +109,7 @@ func (h *Handler) HandleSyncState() http.HandlerFunc {
 				TotalUpdates: len(result.Updates),
 				TotalDeletes: len(result.Deletes),
 				Fails:        result.Fails,
+				UpdatedAt:    result.UpdatedAt,
 			},
 		})
 	}

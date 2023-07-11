@@ -74,11 +74,12 @@ func (s *Service) Save(ctx context.Context, stateID string) (SaveResult, error) 
 }
 
 type SyncResult struct {
-	State   string
-	Inserts []Zone
-	Updates []Zone
-	Deletes []Zone
-	Fails   []SyncZoneFailure
+	State     string
+	Inserts   []Zone
+	Updates   []Zone
+	Deletes   []Zone
+	Fails     []SyncZoneFailure
+	UpdatedAt time.Time
 }
 
 type SyncZoneFailure struct {
@@ -134,6 +135,7 @@ func (s *Service) Sync(ctx context.Context, stateID string) (SyncResult, error) 
 		stateID:      stateID,
 		updatedZones: updatedZones,
 		storedZones:  storedZoneMap,
+		updatedAt:    state.UpdatedAt,
 	}), nil
 }
 
@@ -141,6 +143,7 @@ type writeDeltaParams struct {
 	stateID      string
 	updatedZones []Zone
 	storedZones  ZoneURIMap
+	updatedAt    time.Time
 }
 
 // writeDelta compares the collection of up to date zones
@@ -166,11 +169,12 @@ func (s *Service) writeDelta(ctx context.Context, p writeDeltaParams) SyncResult
 	fetchResult := fetcher.FetchEach(ctx, delta.InsertUpdate())
 
 	result := SyncResult{
-		State:   p.stateID,
-		Inserts: []Zone{},
-		Updates: []Zone{},
-		Deletes: []Zone{},
-		Fails:   []SyncZoneFailure{},
+		State:     p.stateID,
+		Inserts:   []Zone{},
+		Updates:   []Zone{},
+		Deletes:   []Zone{},
+		Fails:     []SyncZoneFailure{},
+		UpdatedAt: p.updatedAt,
 	}
 
 	// Record any errors while fetching the
