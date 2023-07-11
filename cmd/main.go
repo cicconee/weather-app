@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/admin"
 	"github.com/cicconee/weather-app/internal/alert"
 	"github.com/cicconee/weather-app/internal/forecast"
 	"github.com/cicconee/weather-app/internal/nws"
@@ -18,6 +19,9 @@ import (
 )
 
 var port string
+
+// TODO: Make secretKey a environment variable.
+var secretKey = "secret-key"
 
 func main() {
 	flag.StringVar(&port, "p", "8080", "the port the server should listen on")
@@ -42,6 +46,7 @@ func main() {
 		States:    state.New(nws.DefaultClient, db, pool),
 		Alerts:    alert.New(nws.DefaultClient, db),
 		Forecasts: forecast.New(nws.DefaultClient, db),
+		Admins:    admin.New([]byte(secretKey), db),
 	}
 	if err := srv.Start(); err != nil {
 		log.Println(err)

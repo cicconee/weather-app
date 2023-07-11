@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/admin"
 	"github.com/cicconee/weather-app/internal/alert"
 	"github.com/cicconee/weather-app/internal/forecast"
 	"github.com/cicconee/weather-app/internal/state"
@@ -26,6 +27,7 @@ type Server struct {
 	States    *state.Service
 	Alerts    *alert.Service
 	Forecasts *forecast.Service
+	Admins    *admin.Service
 
 	handler      *Handler
 	shutdownCh   chan os.Signal
@@ -55,6 +57,7 @@ func (s *Server) init() {
 	s.handler.states = s.States
 	s.handler.alerts = s.Alerts
 	s.handler.forecasts = s.Forecasts
+	s.handler.admins = s.Admins
 	s.setRoutes()
 
 	s.shutdownCh = make(chan os.Signal, 1)
@@ -73,10 +76,19 @@ func (s *Server) init() {
 
 func (s *Server) setRoutes() {
 	s.Router.Get("/", s.handler.HelloWorld())
-	s.Router.Post("/states", s.handler.HandleCreateState())
-	s.Router.Post("/states/sync", s.handler.HandleSyncState())
 	s.Router.Get("/alerts", s.handler.HandleGetAlerts())
 	s.Router.Get("/forecasts", s.handler.HandleGetForecast())
+
+	// Set the admin routes.
+	adminValidater := AdminValidater{
+		admins: s.Admins,
+		logger: s.Logger,
+	}
+
+	s.Router.Post("/admins/login", s.handler.HandlePostLogin())
+	s.Router.Post("/admins/signup", s.handler.HandlePostSignup())
+	s.Router.Post("/admins/states", adminValidater.Validate(s.handler.HandleCreateState()))
+	s.Router.Post("/admins/states/sync", adminValidater.Validate(s.handler.HandleSyncState()))
 }
 
 func (s *Server) run(runFn func()) {
@@ -146,6 +158,10 @@ func (s *Server) validate() error {
 
 	if s.Forecasts == nil {
 		return errors.New("forecasts is nil")
+	}
+
+	if s.Admins == nil {
+		return errors.New("admins is nil")
 	}
 
 	return nil

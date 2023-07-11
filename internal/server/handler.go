@@ -1,11 +1,15 @@
 package server
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/cicconee/weather-app/internal/admin"
 	"github.com/cicconee/weather-app/internal/alert"
+	"github.com/cicconee/weather-app/internal/app"
 	"github.com/cicconee/weather-app/internal/forecast"
 	"github.com/cicconee/weather-app/internal/state"
 )
@@ -15,6 +19,7 @@ type Handler struct {
 	states    *state.Service
 	alerts    *alert.Service
 	forecasts *forecast.Service
+	admins    *admin.Service
 }
 
 func NewHandler(l *log.Logger) *Handler {
@@ -180,6 +185,121 @@ func (h *Handler) HandleGetForecast() http.HandlerFunc {
 				Lon:      point.RoundedLon(),
 				Lat:      point.RoundedLat(),
 				Forecast: periods,
+			},
+		})
+	}
+}
+
+// HandlePostLogin is the handler for POST /admins/login. The handler expects
+// the body to be in JSON format.
+//
+// The "username" attribute needs a string value and should be the username of
+// the user logging in. The "password" attribute needs a string value and should
+// be the password of the user logging in. Password should be the raw value, not
+// the hashed value.
+//
+// Upon success the admin token will be stored as an http only cookie.
+func (h *Handler) HandlePostLogin() http.HandlerFunc {
+	type req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	type res struct {
+		Msg   string `json:"msg"`
+		Token string `json:"token"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		writer := h.NewLogWriter(w, r)
+		ctx := r.Context()
+
+		var body req
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			appErr := &app.ServerResponseError{
+				Err:        fmt.Errorf("HandlePostLogin: Decoding request body: %w", err),
+				Msg:        "Invalid request body",
+				StatusCode: http.StatusBadRequest,
+			}
+
+			h.logger.Println(appErr.Err)
+			writer.WriteError(appErr)
+			return
+		}
+
+		token, err := h.admins.Login(ctx, body.Username, body.Password)
+		if err != nil {
+			err = fmt.Errorf("HandlePostLogin: Logging in user (username=%q): %w", body.Username, err)
+			h.logger.Println(err)
+			writer.WriteError(err)
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     adminTokenCookieKey,
+			HttpOnly: true,
+			Value:    token,
+		})
+
+		writer.Write(Response{
+			Status: http.StatusOK,
+			Body: res{
+				Msg:   "Success",
+				Token: token,
+			},
+		})
+	}
+}
+
+// HandlePostSignup is the handler for POST /admins/signup. The handler expects
+// the body to be in JSON format.
+//
+// The "username" attribute needs a string value and should be the desired username
+// of the user signing up. The "password" attribute needs a string value and should
+// be the password of the user signing up. Password should be the raw value, not
+// the hashed value.
+//
+// Upon success the admin will be stored as a unapproved admin. They will need to
+// be approved in order to login.
+func (h *Handler) HandlePostSignup() http.HandlerFunc {
+	type req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	type res struct {
+		Msg string `json:"msg"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		writer := h.NewLogWriter(w, r)
+		ctx := r.Context()
+
+		var body req
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			appErr := &app.ServerResponseError{
+				Err:        fmt.Errorf("HandlePostSignup: Decoding request body: %w", err),
+				Msg:        "Invalid request body",
+				StatusCode: http.StatusBadRequest,
+			}
+
+			h.logger.Println(appErr.Err)
+			writer.WriteError(appErr)
+			return
+		}
+
+		err := h.admins.Signup(ctx, body.Username, body.Password)
+		if err != nil {
+			err = fmt.Errorf("HandlePostSignup: Signing up user (username=%q): %w", body.Username, err)
+			h.logger.Println(err)
+			writer.WriteError(err)
+			return
+		}
+
+		writer.Write(Response{
+			Status: http.StatusOK,
+			Body: res{
+				Msg: "Success",
 			},
 		})
 	}
